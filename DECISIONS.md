@@ -9,11 +9,11 @@ Dernière mise à jour : 5 novembre 2026. Les décisions ci-dessous viennent d'A
 | 1 | Le projet complet couvre scanner, logiciel CAD/CAM, cloud, imprimante et post-process, pas seulement le scanner | Six chantiers dans le plan de développement V2 |
 | 2 | Impression sur machines à capsules SprintRay (pas d'impression continue) | Objectif de 30 min scan-à-pièce suspendu jusqu'à la mesure du temps de cycle (essai T9 de G1) |
 | 3 | Budget d'erreur total de la chaîne scan, design, impression : 0,2 mm RMS | Répartition nominale : scanner 0,10, design 0,08, impression 0,10 |
-| 4 | **Étude FTO lancée (go du 5 novembre 2026, remplace la décision « pas d'étude pour le moment »)** | Commande du cabinet à faire ; cahier des charges : `docs/cahier-des-charges-FTO.md` ; brevets Otoscan en tête de liste ; la revue obligatoire à la gate M5 reste, sur la base des résultats de l'étude ; budget de l'étude à définir avec les devis |
+| 4 | **FTO : go du 5 novembre 2026 (remplace « pas d'étude pour le moment »). Pas de cabinet pour le moment : Claude réalise une analyse préliminaire** | Analyse non juridique (recherche de brevets publics, statut, revendications) ; elle ne remplace pas un avis de conseil en propriété industrielle ; cahier des charges de la future étude : `docs/cahier-des-charges-FTO.md` ; état : demandée, pas encore réalisée ; revue obligatoire à la gate M5 |
 | 8 | Développement du scanner confié à une équipe mixte, interne et externe | Détail des rôles à fixer dans le plan scanner (`docs/plan-developpement-scanner.md`) |
 | 9 | Développement localisé en Chine | Coûts, fournisseurs et recrutement à raisonner en contexte chinois ; point ouvert : conformité des données et du dispositif (marché visé) |
 | 10 | Tous les types de pièces visés : embouts, coques ITE, et les autres | Le scanner doit couvrir la profondeur du 2ᵉ coude (ITE/IIC) ; la CAO et l'impression à confirmer pour chaque type |
-| 11 | Enveloppe de la phase 1 non définie pour le moment | Cohérent avec la décision 7 : aucun chiffre avant la phase 0 |
+| 11 | Enveloppe de la phase 1 : 200 000 (devise à confirmer) | Première enveloppe donnée le 5 novembre 2026 ; à rapprocher de la décision 7 (pas de budget détaillé avant la phase 0) : l'enveloppe est un plafond, pas un budget chiffré |
 | 5 | Précision d'impression inférieure à 0,10 mm : valeur annoncée pour le dentaire | Non démontrée sur formes auriculaires ; première mesure à faire en semaine 5 |
 | 6 | SprintRay a déjà un cloud et un CAM intégré au cloud | Cloud et CAM : audit, paramétrage et extension de l'existant, pas de développement de zéro |
 | 7 | Aucun chiffre de budget pour le moment | Montants à remettre après la phase 0, à partir de coûts réels |

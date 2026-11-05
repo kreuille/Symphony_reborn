@@ -1,6 +1,6 @@
 # Conception du scanner : calculs et décisions de conception (v0.1)
 
-Complète `specs/scanner-spec-prototype.md` (v0.2) et `docs/plan-developpement-scanner.md`. Tous les chiffres viennent du script `tools/simulation/conception_scanner_calculs.py` (numpy seul), dont la sortie est dans `tools/simulation/resultats_calculs.txt`. Ce sont des **calculs d'ordre de grandeur sur des modèles simples**, pas des mesures : surface lisse, bruit indépendant de 0,02 mm par point, conduit modélisé par un cône légèrement elliptique. Ils servent à orienter la conception, pas à valider.
+Complète `specs/scanner-spec-prototype.md` (v0.2) et `docs/plan-developpement-scanner.md`. Les chiffres des sections 1 à 5 viennent du script `tools/simulation/conception_scanner_calculs.py` (sortie : `tools/simulation/resultats_calculs.txt`) ; ceux de la section 6 viennent du simulateur `tools/simulation/simulateur_scanner.py`. Les deux n'utilisent que numpy. Ce sont des **calculs d'ordre de grandeur sur des modèles simples**, pas des mesures : surface lisse, bruit indépendant de 0,02 mm par point, conduit modélisé par un cône légèrement elliptique. Ils servent à orienter la conception, pas à valider.
 
 ## 1. Quatre résultats qui changent la conception
 
@@ -83,8 +83,50 @@ La spécification n'a pas été modifiée : ces valeurs sont des propositions à
 - Pas de coudes, pas de mouvement de la mâchoire, pas de cérumen ni de reflets.
 - Le champ requis suppose une caméra sur l'axe et un anneau plan à 90° ; un objectif annulaire panoramique (type endoscope industriel) est une autre disposition à comparer.
 
-## 5. Prochaines étapes de conception
-1. **Simulateur complet** (sonde virtuelle dans des conduits 3D avec coudes, rendu de l'anneau, bruit, gyroscope simulé) pour quantifier la dérive réelle des trois options d'axe. Je peux le démarrer.
+## 6. Résultats du simulateur de pose (v0.1)
+
+Outil : `tools/simulation/simulateur_scanner.py` (numpy seul). Il génère un conduit synthétique, simule un retrait manuel de la sonde (vitesse variable, décalage latéral, inclinaison et roulis aléatoires, 30 mesures/s, anneau de 72 points, bruit de 0,02 mm), lance les rayons de l'anneau sur la paroi, puis reconstruit la pose avec cinq configurations. Résultats complets : `tools/simulation/resultats_simulateur.txt` (8 graines) et `resultats_simulateur_gyro_0.5.txt`.
+
+| Config | Axe | Orientation | Latéral |
+|---|---|---|---|
+| poses vraies | vérité | vérité | vérité |
+| E : codeur | codeur, bruit 5 µm | gyroscope | recalage de l'anneau sur un modèle local de surface |
+| V : odométrie visuelle | bruit 10 µm/image + erreur d'échelle 0,3 % (**hypothèses**) | gyroscope | idem |
+| T : suivi externe | pose absolue : bruit 0,04 mm, erreur d'étalonnage main-pointe 0,05 mm, dérive 0,03 mm, 0,1° (**hypothèses**) | suivi | suivi |
+| I : recalage seul | aucune | gyroscope | idem, axe prédit à vitesse constante |
+
+Erreur RMS du nuage reconstruit par rapport à la surface exacte (mm), moyenne sur 8 graines. Gyroscope : biais résiduel 0,05 °/s.
+
+| Conduit | Poses vraies | E codeur | V odom. visuelle | T suivi externe | I recalage seul |
+|---|---|---|---|---|---|
+| Droit, conique, elliptique | 0,020 | 0,21 | 0,21 | **0,074** | 0,27 |
+| Droit, presque cylindrique | 0,020 | 0,20 | 0,20 | **0,075** | 0,23 |
+| Avec deux coudes | 0,019 | 0,71 | 0,71 | **0,075** | 0,74 |
+| Avec deux coudes et micro-relief (hypothèse) | 0,019 | 0,71 | 0,71 | **0,075** | 0,74 |
+
+Erreur de position axiale à la fin d'un retrait de 24 mm (mm) : E 0,08 à 0,45 ; V 0,10 à 0,46 ; T 0,06 ; **I 4,2 à 4,6**.
+
+### Ce que ces résultats indiquent
+1. **Le contrôle du simulateur est correct** : avec les poses vraies, l'erreur vaut le bruit de mesure (0,019 mm).
+2. **Le recalage de surface seul ne donne pas la longueur** : l'axe dérive de 4 à 5 mm sur 24 mm (environ 18 %), conduit conique ou non. Confirme R1 pour l'axe.
+3. **Une source d'axe suffit pour la longueur** : codeur (E) ou odométrie visuelle (V, sous mes hypothèses de bruit) ramènent l'erreur axiale à 0,1-0,5 mm.
+4. **Mais l'axe n'est pas le principal problème.** Avec un axe parfait (E), l'estimation latérale par recalage de l'anneau dérive encore : 0,2 mm RMS sur conduit droit, **0,7 mm avec coudes**. Cela dépasse le budget scanner (0,10 mm nominal, seuil Go 0,15 mm). Correction de mon analyse R1, qui insistait sur l'axe : sur la forme, c'est la dérive latérale et celle de l'orientation dans les coudes qui domine.
+5. **Le suivi externe (T) donne 0,075 mm dans tous les conduits, coudes compris**, sous des hypothèses d'étalonnage que le banc devra confirmer. C'est la seule configuration dans le budget.
+6. **Sensibilités** : biais du gyroscope multiplié par 10 (0,5 °/s) : orientation finale 3,6° au lieu de 0,45°, surface 0,26 mm au lieu de 0,21 mm sur conduit droit (effet modéré, le recalage absorbe une partie). Inclinaison de la sonde de 0° à 2° : aucun effet notable sur la dérive.
+
+### Limites importantes de ce simulateur
+- **L'estimateur de E, V et I est simple** (recalage de chaque anneau sur la moyenne des quatre précédents). Les modèles qui extrapolent le long de l'axe (ordre 1 ou 2) sont instables dans mes essais. Une optimisation sur fenêtre glissante avec contraintes de lissage fera probablement mieux : **le résultat 0,7 mm avec coudes est une limite de cet estimateur, pas une limite démontrée de la méthode.**
+- Conduit synthétique (coudes, conicité, ellipticité choisis par hypothèse), bruits gaussiens, pas de cérumen, de reflets, de mouvement de mâchoire ni d'occultation du suivi.
+- Les valeurs de V (odométrie visuelle) et de T (suivi externe) sont des hypothèses de ma part ; la faisabilité réelle de V dépend de la texture des images, à tester.
+
+### Conséquences pour la conception
+- **La spécification (§4.2 « IMU + ICP ») est insuffisante** : à retenir pour la mise à jour de la spécification.
+- **Le banc de la phase 1 ne peut pas se limiter à un codeur linéaire** si les fantômes ont des coudes : il faut une référence de pose en 6 degrés de liberté (bras motorisé, table à plusieurs axes ou suivi externe de référence).
+- **Le suivi externe de la poignée (option T3 du plan) devient la base de référence** pour la phase 1 ; l'odométrie visuelle et un meilleur estimateur restent des pistes à comparer, avec comme question : quelle erreur latérale atteint-on dans des coudes ?
+- Prochaines étapes pour le simulateur : estimateur par fenêtre glissante, coudes plus réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
+
+## 7. Prochaines étapes de conception
+1. **Simulateur** : version 0.1 faite (section 6) ; à améliorer (estimateur par fenêtre glissante, coudes réalistes, mâchoire, occultation).
 2. **Banc optique tête A** : choix du module caméra (résolution, cadence, champ), du laser vert 520 nm, du miroir conique, mesure de la résolution réelle.
 3. **Nomenclature des composants et fournisseurs** (caméras 1 mm, lasers, cônes ou DOE, gyroscope), en tenant compte du lieu de développement (Chine).
 4. **Mise à jour de la spécification** (§4.1 et §4.2) après validation des propositions de la section 3.

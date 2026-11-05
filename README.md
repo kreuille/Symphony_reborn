@@ -16,7 +16,7 @@ Statut : propositions de travail, version du 4 novembre 2026. Aucun budget n'est
 | `docs/presentation-projet-scanner-3D.docx` | Première version de la présentation du scanner, déjà présente dans le dépôt ; remplacée par `docs/presentation-projet-scanner-3D-v2.docx` (capsules SprintRay, FTO alors différé, budget d'erreur 0,2 mm, aucun budget chiffré) |
 | `docs/cahier-des-charges-FTO.md` | Cahier des charges de l'étude FTO, déjà présent dans le dépôt ; l'étude est lancée depuis le 5 novembre 2026 (voir `DECISIONS.md`, décision 4) ; son budget sera fixé sur devis et n'est pas repris dans les autres documents |
 | `docs/plan-developpement-scanner.md` | Plan de développement du scanner : options de suivi de pose (T1 à T4), lots de travail, simulation d'abord, jalons, équipe, risques, 30 premiers jours ; aligné sur `DECISIONS.md` |
-| `docs/conception-scanner.md` | Calculs de conception du scanner (observabilité de la pose, géométrie de la tête A, cadence et datation), architecture de pose proposée, paramètres v0.3 ; script et résultats dans `tools/simulation/` |
+| `docs/conception-scanner.md` | Calculs de conception du scanner (observabilité de la pose, géométrie de la tête A, cadence et datation), résultats du simulateur de pose, architecture de pose proposée, paramètres v0.3 ; script, simulateur de pose et résultats dans `tools/simulation/` |
 | `docs/etude-otoscan.md` | Étude de référence sur l'Otoscan (Natus/Otometrics) et les brevets United Sciences : performances publiées, enseignements, brevets à examiner à la revue M5 |
 
 ## Spécifications et plans pilotes
