@@ -7,7 +7,9 @@ Documentation du projet **scanner 3D intra-auriculaire** et de la chaîne compl�
 | Fichier | Description |
 |---|---|
 | `docs/presentation-projet-scanner-3D.docx` | Dossier de présentation détaillé (8 pages), base du script de présentation : contexte, choix technologique, chaîne complète, feuille de route, PI, réglementation, budget, risques, squelette de présentation, questions probables |
-| `docs/cahier-des-charges-FTO.md` | Cahier des charges de l'étude de liberté d'exploitation (FTO) à confier à un cabinet de propriété industrielle |
+| `docs/plan-developpement-scanner.md` | Plan de développement du scanner : cibles de performance, options de suivi de pose (T1 à T4), lots de travail, simulation d'abord, jalons et portes de décision, équipe, budget indicatif, risques, 30 premiers jours |
+| `docs/etude-otoscan.md` | Étude de référence sur l'Otoscan (Natus/Otometrics) et les brevets United Sciences, enseignements pour le projet |
+| `docs/cahier-des-charges-FTO.md` | Cahier des charges de l'étude de liberté d'exploitation (FTO), avec les brevets prioritaires issus de l'étude Otoscan |
 
 ## Synthèse du projet
 

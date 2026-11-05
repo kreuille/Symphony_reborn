@@ -33,6 +33,25 @@ Cible de la recherche sur les titulaires, à confirmer par le cabinet :
 - Capteurs 3D industriels d'alésage et endoscopie 3D (brevets de sonde)
 - Acteurs chinois : fabricants locaux d'aides auditives, de scanners 3D, de résines et imprimantes
 
+## 4bis. Brevets prioritaires identifiés (étude de l'Otoscan)
+
+Famille **United Sciences / 3DM Systems** (inventeur Karol Hatzilias, dépôts de 2012). Titulaire actuel, statut juridique, pays couverts et échéances **inconnus** : à vérifier en premier. Aucun de ces brevets ne cite Otometrics ni Natus comme titulaire ; leur lien avec l'Otoscan commercial est probable, non confirmé.
+
+| Brevet | Objet | Intérêt pour nous |
+|---|---|---|
+| US 8,715,173 | Laser en anneau et en éventail | Architecture A (anneau laser) |
+| US 8,900,125 | Otoscanning avec modélisation 3D | Chaîne scan → modèle |
+| US 8,900,127 | Capteurs de pression, « compliance » du conduit | Force d'appui |
+| US 8,900,128 | Caméra unique pour vidéo et mesure (laser pulsé une image sur deux) | Capteur partagé |
+| US 8,900,129 | Otoscope vidéo | Sonde |
+| US 8,900,130 | Alerte de sécurité (distance au tympan estimée par statistiques d'oreille) | Alerte de profondeur |
+
+Éléments techniques à examiner contre nos choix : réflecteur conique et lentille diffractive pour l'anneau ; objectif grand angle (environ 150°) ; table de correspondance pixel → coordonnées ; suivi par rétroréflecteurs sur clip ou serre-tête ; suivi par caméras de sonde lisant un casque à repères (Otoscan, non décrit dans ces brevets) ; localisation du tympan par stéréo-mouvement ou point laser parallèle.
+
+Demander au cabinet de comparer chacune des **options de suivi de pose** (T1 à T4 de `plan-developpement-scanner.md`) à ces brevets, et de proposer des contournements.
+
+Titulaires à ajouter à la liste du §4 : Natus / Otometrics, United Sciences / 3DM Systems, PointClear Solutions (conception du logiciel de l'Otoscan).
+
 ## 5. Livrables attendus
 1. **Stratégie de recherche** documentée (classes CPC, mots-clés, bases utilisées)
 2. **Liste des brevets pertinents** en vigueur (statut juridique, pays, échéance)
