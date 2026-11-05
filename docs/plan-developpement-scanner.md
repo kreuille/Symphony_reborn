@@ -2,21 +2,20 @@
 
 **Principe** : le scanner est la pièce maîtresse de la solution. Ce plan organise son développement de façon à lever d'abord le risque principal (le suivi de pose), à avancer sur le logiciel avant que le matériel existe, et à décider par critères chiffrés.
 
-Les chiffres de coût, de délai et de performance sont des **hypothèses de travail** à valider ; ils sont signalés comme tels.
+**Cohérence avec le dépôt** : ce plan complète `specs/scanner-spec-prototype.md` et `specs/scanner-plan-pilote.md` et respecte `DECISIONS.md` : budget d'erreur de la chaîne de 0,2 mm RMS (scanner : 0,10 nominal, seuil Go 0,15), impression sur machines à capsules SprintRay, FTO différé avec revue obligatoire à la gate M5, aucun budget chiffré avant la phase 0. Les durées et seuils ci-dessous sont des **hypothèses de travail** ; en cas de divergence, la spécification et le calendrier maître font foi.
 
 ## 1. Cibles de performance (hypothèses)
 
-Dérivées de la référence Otoscan (voir `etude-otoscan.md`) : on vise au moins la même qualité.
+Les valeurs de l'Otoscan (voir `etude-otoscan.md`) servent de repère. **Attention : le budget d'erreur de notre chaîne (scanner 0,10 mm RMS nominal, seuil Go 0,15) est environ quatre fois plus strict que l'écart-type publié de l'Otoscan (0,415 mm, mesuré sur une méthode différente).** Il faut donc d'abord vérifier que les deux mesures sont comparables, et ne pas se contenter de « faire aussi bien que l'Otoscan ».
 
 | Critère | Cible phase 1 (fantômes) | Référence |
 |---|---|---|
-| Biais moyen vs référence | ≤ 0,1 mm | Otoscan : -0,05 mm |
-| Écart-type | ≤ 0,4 mm (objectif 0,3) | Otoscan : 0,415 mm ; silicone : 0,5 mm |
-| Durée de scan par oreille | ≤ 2 min | Otoscan : 2 à 6 min |
+| Erreur RMS du scanner vs référence | seuil Go 0,15 mm ; nominal 0,10 mm (`DECISIONS.md`) | Otoscan : écart-type 0,415 mm, biais -0,05 mm (méthode différente) |
+| Durée de scan par oreille | ≤ 2 min (hypothèse) | Otoscan : 2 à 6 min |
 | Couverture | jusqu'au 2ᵉ coude + 4-6 mm | Otoscan : même exigence |
-| Scans complets du premier coup | ≥ 90 % | Otoscan : 70 % (revendiqué) |
+| Scans complets du premier coup | ≥ 90 % (hypothèse) | Otoscan : 70 % (revendiqué) |
 | Diamètre de pointe | à fixer d'après données anatomiques ; indicatif ≤ 4-5 mm | à valider |
-| Sécurité | alerte de profondeur, arrêt automatique | brevet US 8,900,130 (à vérifier au FTO) |
+| Sécurité | alerte de profondeur, arrêt automatique | brevet US 8,900,130 (à examiner à la revue M5) |
 
 ## 2. Décision structurante : comment connaître la position de la sonde
 
@@ -32,7 +31,7 @@ Un anneau laser ne donne qu'une tranche à la fois. Tout l'assemblage dépend de
 **Recommandation** :
 1. **Simuler d'abord T2** (semaines 1 à 4) : si la simulation montre une ambiguïté axiale non résoluble, on le sait avant d'avoir dépensé en matériel.
 2. **Construire T3 comme référence de repli** : le plus rapide à rendre fonctionnel.
-3. T1 sert seulement de comparaison, selon le résultat du FTO. T4 est écarté de la phase 1.
+3. T1 sert seulement de comparaison ; son recours dépendra de la revue brevets de la gate M5. T4 est écarté de la phase 1.
 4. Une combinaison T2 + repère externe léger est probablement la solution finale.
 
 ## 3. Lots de travail
@@ -63,13 +62,13 @@ Normes à examiner avec un expert (à confirmer selon le marché) : ISO 14971 (g
 
 | Période | Contenu | Porte de décision |
 |---|---|---|
-| **Mois 0** | Lancement du FTO ; recrutement ou contractualisation de l'équipe ; achat du matériel de base | — |
-| **M0-M3 (phase 1)** | Simulateur ; banc optique (WP1, WP4) ; fantômes ; comparaison T2 / T3 ; premier maillage de fantôme | **Porte 1** : biais et écart-type sur fantômes ; choix du suivi ; résultat FTO |
-| **M3-M9** | Sonde manuelle v1 ; firmware ; reconstruction temps réel ; IA v1 ; complétude et profondeur ; fantômes souples | **Porte 2** : cibles du §1 atteintes ; mesures répétables par plusieurs opérateurs |
+| **Mois 0** | Recrutement ou contractualisation de l'équipe ; achat du matériel de base ; veille brevets légère (les brevets de `etude-otoscan.md`), sans étude FTO | — |
+| **M0-M3 (phase 1)** | Simulateur ; banc optique (WP1, WP4) ; fantômes ; comparaison T2 / T3 ; premier maillage de fantôme | **Porte 1** : erreur RMS sur fantômes ; choix du suivi |
+| **M3-M9** (à caler sur la gate M5 : revue brevets obligatoire avant tout prototype chez un tiers) | Sonde manuelle v1 ; firmware ; reconstruction temps réel ; IA v1 ; complétude et profondeur ; fantômes souples | **Porte 2** : cibles du §1 atteintes ; mesures répétables par plusieurs opérateurs |
 | **M9-M15** | Pilote laboratoires (30 à 300 oreilles) avec cadre réglementaire défini ; collecte pour l'IA ; interface avec la CAO automatique | **Porte 3** : comparaison au silicone ; taux de remake |
 | **M15-M24** | Version industrialisable ; étalonnage de production ; dossier réglementaire | **Porte 4** : décision de lancement industriel |
 
-Le calendrier est indicatif ; les portes sont le vrai pilotage.
+Le calendrier est indicatif : les gates du calendrier maître (`docs/calendrier-maitre.xlsx`) font foi ; les portes ci-dessus sont des jalons internes au scanner.
 
 ## 6. Équipe (hypothèse)
 
@@ -85,14 +84,14 @@ Le calendrier est indicatif ; les portes sont le vrai pilotage.
 
 Environ 6 à 8 personnes à pleine charge. Les ingénieurs en Chine réduisent fortement le coût ; un expert extérieur en optique ou en vision 3D médicale peut accélérer la phase 1.
 
-**Budget indicatif de la phase 1 (12 semaines), à valider par devis** : de l'ordre de 80 à 150 k€ en Chine, 200 à 350 k€ en Europe, matériel inclus. Cohérent avec l'enveloppe globale de 0,5 à 2,5 M€ estimée pour le développement complet.
+**Budget** : non chiffré à ce stade (décision 7 de `DECISIONS.md`) ; montants à remettre après la phase 0, à partir de coûts réels. L'effectif ci-dessus est une hypothèse à rapprocher des 17 à 25 ETP du plan complet.
 
 ## 7. Risques principaux
 
 | Risque | Réponse |
 |---|---|
 | Suivi de pose imprécis ou dérivant | Simulation en premier ; T3 en repli ; critères de porte 1 |
-| Brevets bloquants (anneau laser, suivi, caméra grand angle) | FTO immédiat ; conception de contournement ; veille continue |
+| Brevets bloquants (anneau laser, suivi, caméra grand angle) | Risque accepté pour le moment (décision 4) ; revue obligatoire à la gate M5 ; contournement de conception ; veille |
 | Miniaturisation (capteur, optique, laser dans une pointe fine) | Banc d'abord, pointe réelle ensuite ; plusieurs fournisseurs de modules |
 | Reflets, cérumen, poils, humidité | Longueur d'onde et filtrage ; IA ; contre-indications ; scénarios dans les fantômes |
 | Mouvement du patient (tête, mâchoire) | Clip de compensation ; scans mâchoire ouverte et fermée au début |
@@ -102,7 +101,7 @@ Environ 6 à 8 personnes à pleine charge. Les ingénieurs en Chine réduisent f
 
 ## 8. Premiers 30 jours
 
-1. Lancer le FTO avec les brevets de l'étude Otoscan en tête de liste.
+1. Veille brevets légère sur la famille United Sciences (voir `etude-otoscan.md`) ; la décision de différer l'étude FTO reste en vigueur jusqu'à la gate M5.
 2. Définir précisément la cible (cahier des charges produit : taille de pointe, type d'appareils visés, utilisateur).
 3. Construire le simulateur minimal : sonde virtuelle, conduit 3D, image laser, vérité terrain.
 4. Commander le matériel du banc : modules caméra, diodes laser, éléments diffractifs ou cônes, IMU, platines de translation et rotation.
@@ -115,5 +114,5 @@ Environ 6 à 8 personnes à pleine charge. Les ingénieurs en Chine réduisent f
 - Équipe interne, bureau d'études externe, ou mixte ?
 - Localisation du développement : Chine, Europe, ou les deux ?
 - Types d'appareils visés en premier : embouts, coques ITE, ou tous ?
-- Enveloppe pour la phase 1.
-- Accord pour lancer le FTO dès maintenant.
+- Confirmer que le FTO reste différé jusqu'à la gate M5, ou l'avancer compte tenu des brevets de l'Otoscan.
+- Confirmer les cibles chiffrées du §1 après les premiers essais.

@@ -89,10 +89,10 @@ Pour aller plus loin : étude de cas PointClear (conception du logiciel), manuel
 
 1. L'architecture A (anneau laser) est validée par un produit approuvé FDA, mais elle repose sur un **suivi externe** (casque + caméras).
 2. Sans ICP dans leurs brevets : un anneau laser ne donne pas de relief le long de l'axe, donc le recalage par surface est peu contraint dans un conduit quasi cylindrique. Notre hypothèse « IMU + ICP + TSDF sans casque » est plus risquée qu'envisagé au départ (voir `plan-developpement-scanner.md`).
-3. Les brevets US 8,900,125 à 130 et 8,715,173 (dépôts 2012) sont à placer en tête du FTO ; statut juridique et titulaire actuel à vérifier.
-4. L'Otoscan livre un STL et passe par un fabricant tiers : notre différenciation est la chaîne scan → CAO automatique → impression en quelques minutes.
+3. Les brevets US 8,900,125 à 130 et 8,715,173 (dépôts 2012) sont à examiner en priorité à la revue brevets de la gate M5 (étude FTO différée, `DECISIONS.md` décision 4) ; statut juridique et titulaire actuel à vérifier. Si la tête A (anneau laser) est retenue, le risque est plus direct que pour la tête B.
+4. L'Otoscan livre un STL et passe par un fabricant tiers : notre différenciation est la chaîne scan → CAO automatique → impression sur machines à capsules SprintRay (l'objectif de durée scan-à-pièce est suspendu jusqu'à la mesure du temps de cycle, décision 2).
 5. À reprendre : contrôle de complétude, jauge de profondeur, alerte tympan, contre-indications, formation opérateur.
-6. Repères de performance pour nos critères Go/No-Go : écart-type ≈ 0,4 mm, biais ≈ 0,05 mm, scan ≤ 2 min, 70 % de scans complets du premier coup (revendiqué).
+6. Repères de performance : écart-type ≈ 0,4 mm, biais ≈ 0,05 mm, scan de 2 à 6 min, 70 % de scans complets du premier coup (revendiqué). Notre budget d'erreur scanner (0,10 mm RMS nominal, seuil Go 0,15) est bien plus strict : comparer les méthodes de mesure avant toute conclusion.
 7. Piste réglementaire : l'Otoscan, déjà approuvé par la FDA, pourrait servir de dispositif de référence (à confirmer par un expert).
 
 ## Sources
