@@ -244,6 +244,36 @@ def run_config(tr, cfg, rng, P):
         for k in range(nf):
             Re[k] = Rt[k] @ exp_so3(P["trk_rot"]*DEG*rng.standard_normal(3))
             pe[k] = Ot[k] + he + drift[k] + P["trk_pos"]*rng.standard_normal(3)
+    elif cfg in ("Ec", "Vc"):
+        # Suivi du centre de la lumière. Le centre de l'anneau (situé à la distance B devant la sonde) avance
+        # le long de la tangente du conduit à cet endroit : celle-ci est la direction de la sonde tournée de
+        # (courbure x B). La courbure est estimée à partir de la rotation mesurée par le gyroscope.
+        Re = gyro_orientation(tr, rng, P)
+        pe = np.zeros_like(Ot)
+        scale = P["vo_scale"]*rng.standard_normal()
+        cen = np.stack([loc[:, :, 0].mean(1), loc[:, :, 1].mean(1), np.full(nf, Bz)], 1)
+        kf = np.zeros(2)
+        kap = np.zeros((nf, 2))
+        alpha = P["kappa_alpha"]
+        for k in range(nf):
+            if k < P["k0"]:
+                pe[k] = Ot[k]
+                continue
+            dzt = (Ot[k]-Ot[k-1]) @ Rt[k][:, 2]
+            if cfg == "Ec":
+                dz = dzt + P["enc_sigma"]*rng.standard_normal()
+            else:
+                dz = dzt*(1+scale) + P["vo_sigma"]*rng.standard_normal()
+            w = log_so3(Re[k-1].T @ Re[k])
+            kf = (1-alpha)*kf + alpha*np.array([w[1], -w[0]])/dz
+            kap[k] = kf
+            u1 = np.array([kf[0]*Bz, kf[1]*Bz, 1.0]); u1 /= np.linalg.norm(u1)
+            u0 = np.array([kap[k-1][0]*Bz, kap[k-1][1]*Bz, 1.0]); u0 /= np.linalg.norm(u0)
+            dirw = Re[k]@u1 + Re[k-1]@u0
+            dirw /= np.linalg.norm(dirw)
+            full = Re[k-1] @ cen[k-1] - Re[k] @ cen[k] + dz*dirw
+            lat = (Re[k].T @ (full - Re[k][:, 2]*dz))
+            pe[k] = pe[k-1] + Re[k][:, 2]*dz + Re[k] @ np.array([lat[0], lat[1], 0.0])
     else:
         Re = gyro_orientation(tr, rng, P)
         pe = np.zeros_like(Ot)
@@ -404,7 +434,7 @@ def parametres(args):
                 sigma_m=0.02, gyro_bias=args.biais_gyro, gyro_arw=0.01,
                 enc_sigma=0.005, vo_sigma=0.01, vo_scale=0.003, icp_prior_ax=0.3, lat_prior=0.15,
                 trk_pos=0.04, trk_handeye=0.05, trk_drift=0.03, trk_rot=0.1,
-                k0=15, kmodel=KM, ordre=ORD, tilt=args.inclinaison)
+                k0=15, kmodel=KM, ordre=ORD, kappa_alpha=0.15, tilt=args.inclinaison)
 
 def main():
     ap = argparse.ArgumentParser()
@@ -420,7 +450,7 @@ def main():
     if args.test_externe:
         test_externe(args, P)
         return
-    cfgs = ["ref", "E", "V", "T", "I"]
+    cfgs = ["ref", "E", "V", "Ec", "Vc", "T", "I"]
     lignes = []
     def out(s=""):
         print(s); lignes.append(s)
@@ -442,7 +472,7 @@ def main():
                 res[c].append(metriques(canal, tr, pe, Re, q, P))
         out("\nConduit « %s » (%d images environ par retrait)" % (nom, int(np.mean(nfr))))
         out("%-6s %17s %13s %15s %15s %15s" % ("Config", "RMS surface (mm)", "95e c. (mm)", "Axe final (mm)", "Latéral RMS", "Orient. fin (°)"))
-        lab = {"ref": "poses vraies", "E": "E codeur", "V": "V odom.vis.", "T": "T suivi ext.", "I": "I ICP seul"}
+        lab = {"ref": "poses vraies", "E": "E codeur+ICP", "V": "V odom.+ICP", "Ec": "E codeur+centre", "Vc": "V odom.+centre", "T": "T suivi ext.", "I": "I ICP seul"}
         for c in cfgs:
             m = {k: np.array([r[k] for r in res[c]]) for k in res[c][0]}
             f = lambda k: "%6.3f (%5.3f)" % (m[k].mean(), m[k].std())

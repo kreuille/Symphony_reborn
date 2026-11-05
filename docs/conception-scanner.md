@@ -106,24 +106,44 @@ Erreur RMS du nuage reconstruit par rapport à la surface exacte (mm), moyenne s
 
 Erreur de position axiale à la fin d'un retrait de 24 mm (mm) : E 0,08 à 0,45 ; V 0,10 à 0,46 ; T 0,06 ; **I 4,2 à 4,6**.
 
+### Amélioration de l'estimateur : suivi du centre de la lumière (v0.2 du simulateur)
+Le recalage de chaque anneau sur un modèle de surface (configs E et V ci-dessus) dérive dans les coudes. Diagnostic : l'anneau est situé à la distance B devant la sonde ; dans un coude, la tangente du conduit à cet endroit est tournée de (courbure × B) par rapport à l'axe de la sonde, soit environ 0,4 rad avec B = 3,5 mm et un coude serré. Un estimateur qui suppose que le centre de la lumière avance dans l'axe de la sonde se trompe donc d'environ 0,07 mm par image dans un coude.
+
+Nouvel estimateur (configs « centre ») : la position latérale est déduite du centre de l'anneau mesuré (moyenne des points) et de sa progression le long de la tangente ; la courbure est estimée par le gyroscope (rotation mesurée par unité d'avance, filtrée). Pas de modèle de surface, pas de recalage.
+
+| Conduit | Recalage de surface (E + ICP) | **Suivi du centre, axe par codeur** | **Suivi du centre, axe par odométrie visuelle** | Suivi externe (T) |
+|---|---|---|---|---|
+| Droit, conique | 0,21 | 0,25 | 0,26 | **0,074** |
+| Droit, presque cylindrique | 0,20 | 0,26 | 0,26 | **0,075** |
+| Avec deux coudes | 0,71 | **0,25** | **0,25** | **0,075** |
+| Avec deux coudes et micro-relief (hypothèse) | 0,71 | **0,25** | **0,25** | **0,075** |
+
+Erreur RMS du nuage (mm), 8 graines. Erreur latérale RMS du suivi du centre avec coudes : 0,35 mm (0,5 mm si le biais résiduel du gyroscope est dix fois plus fort, 0,5 °/s, avec une surface de 0,30 mm).
+
+Lecture :
+1. **Gain net dans les coudes** (0,71 → 0,25 mm) ; pas de gain sur conduit droit, où l'ancien estimateur est déjà à 0,2 mm. L'erreur reste **au-dessus du seuil Go de 0,15 mm** (et du nominal 0,10).
+2. **L'axe par odométrie visuelle (V) donne presque le même résultat que le codeur** (0,25 contre 0,25 mm) sous mes hypothèses de bruit (10 µm par image, 0,3 % d'échelle). Elles restent à mesurer (protocole `protocole-experience-otoscope-colmap.md`).
+3. **Limites de cet estimateur** : il suppose que la sonde reste alignée sur le conduit à quelques degrés près. Sensibilité à l'inclinaison de la sonde simulée : faible (0,21 à 0,25 mm de 0,5° à 2°). L'erreur restante vient surtout de l'estimation de la direction du conduit (gyroscope, filtre de courbure). Le coefficient de filtrage de la courbure a été choisi parmi trois valeurs sur les mêmes graines : léger réglage sur les données de test.
+4. **Les coudes simulés sont des coudes que j'ai choisis** (deux coudes opposés de 29° et 26°, rayon de courbure minimal de l'ordre de 9 mm) : à remplacer par des courbures mesurées sur de vraies oreilles.
+
 ### Ce que ces résultats indiquent
 1. **Le contrôle du simulateur est correct** : avec les poses vraies, l'erreur vaut le bruit de mesure (0,019 mm).
 2. **Le recalage de surface seul ne donne pas la longueur** : l'axe dérive de 4 à 5 mm sur 24 mm (environ 18 %), conduit conique ou non. Confirme R1 pour l'axe.
 3. **Une source d'axe suffit pour la longueur** : codeur (E) ou odométrie visuelle (V, sous mes hypothèses de bruit) ramènent l'erreur axiale à 0,1-0,5 mm.
 4. **Mais l'axe n'est pas le principal problème.** Avec un axe parfait (E), l'estimation latérale par recalage de l'anneau dérive encore : 0,2 mm RMS sur conduit droit, **0,7 mm avec coudes**. Cela dépasse le budget scanner (0,10 mm nominal, seuil Go 0,15 mm). Correction de mon analyse R1, qui insistait sur l'axe : sur la forme, c'est la dérive latérale et celle de l'orientation dans les coudes qui domine.
-5. **Le suivi externe (T) donne 0,075 mm dans tous les conduits, coudes compris**, sous des hypothèses d'étalonnage que le banc devra confirmer. C'est la seule configuration dans le budget.
+5. **Le suivi externe (T) donne 0,075 mm dans tous les conduits, coudes compris**, sous des hypothèses d'étalonnage que le banc devra confirmer. C'est la seule configuration dans le budget ; le suivi du centre de la lumière arrive à 0,25 mm.
 6. **Sensibilités** : biais du gyroscope multiplié par 10 (0,5 °/s) : orientation finale 3,6° au lieu de 0,45°, surface 0,26 mm au lieu de 0,21 mm sur conduit droit (effet modéré, le recalage absorbe une partie). Inclinaison de la sonde de 0° à 2° : aucun effet notable sur la dérive.
 
 ### Limites importantes de ce simulateur
-- **L'estimateur de E, V et I est simple** (recalage de chaque anneau sur la moyenne des quatre précédents). Les modèles qui extrapolent le long de l'axe (ordre 1 ou 2) sont instables dans mes essais. Une optimisation sur fenêtre glissante avec contraintes de lissage fera probablement mieux : **le résultat 0,7 mm avec coudes est une limite de cet estimateur, pas une limite démontrée de la méthode.**
+- **L'estimateur de E, V et I est simple** (recalage de chaque anneau sur la moyenne des quatre précédents). Les modèles qui extrapolent le long de l'axe (ordre 1 ou 2) sont instables dans mes essais. Le résultat de 0,7 mm avec coudes était bien une limite de cet estimateur : le suivi du centre de la lumière (sous-section ci-dessus) le ramène à 0,25 mm. Une optimisation sur fenêtre glissante fera peut-être encore mieux ; l'objectif de 0,15 mm n'est pas atteint.
 - Conduit synthétique (coudes, conicité, ellipticité choisis par hypothèse), bruits gaussiens, pas de cérumen, de reflets, de mouvement de mâchoire ni d'occultation du suivi.
 - Les valeurs de V (odométrie visuelle) et de T (suivi externe) sont des hypothèses de ma part ; la faisabilité réelle de V dépend de la texture des images, à tester.
 
 ### Conséquences pour la conception
 - **La spécification (§4.2 « IMU + ICP ») est insuffisante** : à retenir pour la mise à jour de la spécification.
 - **Le banc de la phase 1 ne peut pas se limiter à un codeur linéaire** si les fantômes ont des coudes : il faut une référence de pose en 6 degrés de liberté (bras motorisé, table à plusieurs axes ou suivi externe de référence).
-- **Le suivi externe de la poignée (option T3 du plan) devient la base de référence** pour la phase 1 ; l'odométrie visuelle et un meilleur estimateur restent des pistes à comparer, avec comme question : quelle erreur latérale atteint-on dans des coudes ?
-- Prochaines étapes pour le simulateur : estimateur par fenêtre glissante, coudes plus réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
+- **Le suivi externe de la poignée (option T3 du plan) reste la base de référence** pour la phase 1. Le suivi du centre de la lumière avec gyroscope est la meilleure option sans suivi externe (0,25 mm avec coudes) mais ne tient pas encore le budget ; sa dérive restante est à comparer sur banc.
+- Prochaines étapes pour le simulateur : fusion du suivi du centre et du suivi externe, coudes réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
 
 ## 7. Photogrammétrie, échelle et recalage sur la partie visible
 
