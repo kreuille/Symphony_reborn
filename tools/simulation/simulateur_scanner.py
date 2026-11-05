@@ -315,6 +315,90 @@ def metriques(canal, tr, pe, Re, q, P):
 
 KM, ORD = 4, 0
 
+
+# ----------------------------------------------------------------------------
+# Essai « scan interne + recalage sur la partie visible de l'extérieur »
+# ----------------------------------------------------------------------------
+def surface_externe(canal, rng, Lv, sigma_ext, visible=0.5, ds=0.2, ntheta=36):
+    """Points de la partie visible du conduit (s de 0 à Lv) vus par un capteur 3D externe."""
+    pts = []
+    for sv in np.arange(0.0, Lv, ds):
+        i = int(canal.index(sv))
+        th = 2*np.pi*np.arange(ntheta)/ntheta
+        r = canal.R[i]*(1+canal.e[i]*np.cos(2*(th-canal.phie[i])))
+        if canal.amp:
+            r = r + canal.amp*np.cos(2*np.pi*canal.s[i]/canal.lam)
+        P_ = canal.c[i] + r[:, None]*(np.cos(th)[:, None]*canal.N[i] + np.sin(th)[:, None]*canal.B[i])
+        pts.append(P_)
+    pts = np.concatenate(pts)
+    pts = pts[rng.random(len(pts)) < visible]
+    return pts + sigma_ext*rng.standard_normal(pts.shape)
+
+def umeyama(A, B):
+    mA, mB = A.mean(0), B.mean(0)
+    Ac, Bc = A-mA, B-mB
+    U, D, Vt = np.linalg.svd(Bc.T@Ac/len(A))
+    S = np.eye(3)
+    if np.linalg.det(U)*np.linalg.det(Vt) < 0:
+        S[2, 2] = -1
+    R = U@S@Vt
+    s = np.trace(np.diag(D)@S)/np.mean(np.sum(Ac**2, 1))
+    return s, R, mB - s*R@mA
+
+def icp_sim3(A, B, iters=40, garde=0.8):
+    s, R, t = 1.0, np.eye(3), np.zeros(3)
+    cur = A.copy()
+    for _ in range(iters):
+        d2 = np.sum((cur[:, None, :]-B[None, :, :])**2, 2)
+        j = np.argmin(d2, 1)
+        dm = d2[np.arange(len(cur)), j]
+        keep = dm <= np.quantile(dm, garde)
+        si, Ri, ti = umeyama(cur[keep], B[j[keep]])
+        cur = si*(cur@Ri.T) + ti
+        s, R, t = si*s, Ri@R, si*(Ri@t) + ti
+    return s, R, t
+
+def test_externe(args, P):
+    P = dict(P); P["s_end"] = -2.5
+    out_l = []
+    def out(x=""):
+        print(x); out_l.append(x)
+    out("Essai : scan interne (axe par codeur) avec erreur d'échelle eps, puis correction par la partie visible de l'extérieur")
+    out("Partie visible : s de 0 à %.0f mm, 50 %% des points vus, bruit du capteur externe sig_ext (mm), %d graines." % (args.visible, args.graines))
+    out("Biais de rayon = distance signée moyenne du nuage à la paroi (mm) : > 0 si le conduit paraît trop large.")
+    out("Échelle est./idéale = (échelle trouvée par le recalage) x (1+eps) : 1 = échelle parfaitement corrigée.")
+    out("")
+    out("%-14s %5s %7s | %-17s | %-17s | %-17s | %6s" % ("Conduit", "eps", "sig_ext", "avant", "recalage Sim(3)", "échelle seule", "éch."))
+    out("%-14s %5s %7s | %8s %8s | %8s %8s | %8s %8s | %6s" % ("", "", "", "RMS", "biais", "RMS", "biais", "RMS", "biais", "est/id"))
+    for nom in ("droit_conique", "realiste"):
+        canal = Canal(nom)
+        trs = []
+        for g in range(args.graines):
+            tr = gen_truth(canal, np.random.default_rng(1000+g), P)
+            pe, Re, q = run_config(tr, "E", np.random.default_rng(5000+g), P)
+            trs.append((tr, pe, q))
+        for eps in (0.0, 0.01, 0.03):
+            for sig in (0.1, 0.5):
+                M = []
+                for g, (tr, pe, q) in enumerate(trs):
+                    p0 = tr["O"][0]
+                    qs = p0 + (1+eps)*(q-p0)
+                    base = np.repeat(canal.index(tr["sp"]+P["B"]), tr["nr"])
+                    def mes(pts):
+                        d = canal.distance(pts.reshape(-1, 3), base)
+                        return np.sqrt(np.mean(d**2)), np.mean(d)
+                    ext = surface_externe(canal, np.random.default_rng(9000+g), args.visible, sig)
+                    zone = (tr["sp"]+P["B"] <= args.visible)
+                    s_, R_, t_ = icp_sim3(qs[zone].reshape(-1, 3), ext)
+                    q_sim = s_*(qs.reshape(-1, 3)@R_.T) + t_
+                    q_sc = p0 + s_*(qs-p0)
+                    M.append(mes(qs) + mes(q_sim) + mes(q_sc) + (s_*(1+eps),))
+                m = np.mean(np.array(M), 0)
+                out("%-14s %4.0f%% %7.1f | %8.3f %8.3f | %8.3f %8.3f | %8.3f %8.3f | %6.3f" % (nom, eps*100, sig, *m))
+    if args.sortie:
+        with open(args.sortie, "w") as fh:
+            fh.write("\n".join(out_l)+"\n")
+
 def parametres(args):
     return dict(dt=1/30., nframes=400, nrays=72, B=3.5, v0=5.0, s_start=26.0, s_end=2.0,
                 sigma_m=0.02, gyro_bias=args.biais_gyro, gyro_arw=0.01,
@@ -329,8 +413,13 @@ def main():
     ap.add_argument("--inclinaison", type=float, default=2.0, help="inclinaison aléatoire de la sonde, écart-type en degrés")
     ap.add_argument("--conduits", default="realiste,droit_conique,droit_cylindre,relief")
     ap.add_argument("--sortie", default=None)
+    ap.add_argument("--test-externe", action="store_true", help="essai de recalage sur la partie visible du conduit")
+    ap.add_argument("--visible", type=float, default=6.0, help="profondeur visible de l'extérieur, mm")
     args = ap.parse_args()
     P = parametres(args)
+    if args.test_externe:
+        test_externe(args, P)
+        return
     cfgs = ["ref", "E", "V", "T", "I"]
     lignes = []
     def out(s=""):

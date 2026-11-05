@@ -125,8 +125,45 @@ Erreur de position axiale à la fin d'un retrait de 24 mm (mm) : E 0,08 à 0,45 
 - **Le suivi externe de la poignée (option T3 du plan) devient la base de référence** pour la phase 1 ; l'odométrie visuelle et un meilleur estimateur restent des pistes à comparer, avec comme question : quelle erreur latérale atteint-on dans des coudes ?
 - Prochaines étapes pour le simulateur : estimateur par fenêtre glissante, coudes plus réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
 
-## 7. Prochaines étapes de conception
-1. **Simulateur** : version 0.1 faite (section 6) ; à améliorer (estimateur par fenêtre glissante, coudes réalistes, mâchoire, occultation).
+## 7. Photogrammétrie, échelle et recalage sur la partie visible
+
+### 7.1 Photogrammétrie seule : forme juste, échelle inconnue ?
+Avec une seule caméra, la reconstruction est connue à un facteur d'échelle près : une seule longueur réelle suffit à fixer toutes les dimensions. Trois nuances pour le conduit auditif :
+1. **La forme n'est pas forcément bonne** : la caméra avance le long de son axe de visée (profondeur mal triangulée), les parois sont peu texturées, humides et brillantes, l'objectif est grand angle, la mâchoire bouge.
+2. **L'échelle peut dériver** le long de la séquence : ce n'est alors plus un seul facteur à corriger.
+3. **La tolérance est serrée** : une erreur d'échelle de 1 % sur un rayon de 4 mm donne 0,04 mm, à comparer au budget de 0,10 mm RMS ; il faut tenir 1 à 2 %.
+
+L'anneau laser fournit une mesure métrique à chaque image ; il lève donc l'ambiguïté d'échelle. Une base stéréo connue ou un suivi externe le font aussi ; un accéléromètre non (R2).
+
+### 7.2 Idée : recaler le scan interne sur la partie du canal visible de l'extérieur
+Proposition d'Arnaud : le début du canal est visible de l'extérieur ; un capteur 3D externe le scanne, et la superposition des deux scans corrige l'échelle.
+
+**Essai dans le simulateur** (`python3 simulateur_scanner.py --test-externe`, résultats dans `tools/simulation/resultats_recalage_externe.txt`). Scan interne avec axe par codeur et erreur d'échelle ε, puis recalage par ICP sur 6 mm de conduit visible (50 % des points vus, bruit du capteur externe σ). Moyenne sur 6 graines :
+
+| Conduit | ε | σ externe | Biais de rayon avant | Biais après (échelle seule) | Échelle retrouvée (1 = parfait) | RMS avant | RMS après recalage complet |
+|---|---|---|---|---|---|---|---|
+| Droit conique | 3 % | 0,1 mm | 0,103 mm | 0,030 mm | 1,007 | 0,305 | 0,398 |
+| Droit conique | 3 % | 0,5 mm | 0,103 mm | 0,038 mm | 1,010 | 0,305 | 0,379 |
+| Avec coudes | 3 % | 0,1 mm | 0,170 mm | 0,079 mm | 1,002 | 0,720 | 0,776 |
+| Avec coudes | 3 % | 0,5 mm | 0,170 mm | 0,080 mm | 1,002 | 0,720 | 0,733 |
+
+Lecture :
+1. **L'échelle est retrouvée à 1 % près**, même avec 0,5 mm de bruit sur le capteur externe, parce que des centaines de points sont moyennés. L'erreur de rayon due à l'échelle est fortement réduite.
+2. **Il faut n'appliquer que l'échelle** : le recalage complet (rotation et translation) dégrade la forme (RMS de 0,28 à 0,4-0,6 mm sur conduit droit), car la partie visible est courte et presque cylindrique, donc mal contrainte en roulis et en position axiale.
+3. **La dérive n'est pas corrigée** : le RMS de base (0,28 mm droit, 0,72 mm avec coudes) ne bouge pas. Le recalage final ne règle que l'échelle.
+4. **Réserve importante** : j'ai simulé un bruit aléatoire, pas un **biais systématique** du capteur externe (peau, concavités, multi-trajets d'un ToF). Un biais radial de 0,1 mm donnerait environ 2,5 % d'erreur d'échelle pour un rayon de 4 mm (estimation simple), soit l'ordre de grandeur de l'erreur qu'on veut corriger. La qualité réelle du capteur externe est le point à mesurer.
+
+**Conclusion** : l'idée sert bien de contrôle d'échelle, à condition d'avoir un capteur externe précis. Son plus grand intérêt est un usage continu (capteur qui voit l'oreille et la poignée de la sonde) : c'est le suivi externe T3, seule configuration qui tient le budget en 6.
+
+### 7.3 Otoscopes USB bas coût et photogrammétrie libre (type OpenScan)
+- **OpenScan** est un projet libre de numérisation par photogrammétrie d'**objets posés sur un plateau tournant**, la caméra tournant autour. C'est une vue de l'extérieur : il ne convient pas à l'intérieur d'un conduit. Il pourrait servir pour scanner le **pavillon** de l'oreille avec plusieurs caméras, en pratique difficile sur un patient (mouvement, durée).
+- Les logiciels de photogrammétrie libres (COLMAP, Meshroom, OpenSfM) peuvent traiter des images d'otoscope.
+- **Otoscopes USB bas coût** : utiles pour une **expérience rapide**, pas comme base du produit. Caractéristiques habituelles à vérifier sur le modèle choisi : pointe de 4 à 6 mm, vidéo 720p à 1080p, mise au point fixe, auto-exposition, éclairage LED non réglable, pas d'horodatage matériel, champ souvent étroit (vers l'avant, pas panoramique). Ils ne permettent ni l'anneau laser, ni la synchronisation à 0,5 ms exigée en R4, ni un étalonnage fiable sans travail.
+- **Expérience proposée** : filmer un fantôme d'oreille en silicone de géométrie connue avec un otoscope bas coût, traiter la vidéo avec COLMAP, et mesurer (a) si la reconstruction fonctionne dans ce milieu peu texturé, (b) la forme et la dérive d'échelle par rapport au fantôme. Cela teste directement l'hypothèse de l'odométrie visuelle (option V), à faible coût. Fantômes d'abord ; tout essai sur une personne demande consentement et cadre éthique.
+
+## 8. Prochaines étapes de conception
+1. **Simulateur** : version 0.1 faite (sections 6 et 7.2) ; à améliorer (estimateur par fenêtre glissante, coudes réalistes, mâchoire, occultation, biais systématique du capteur externe).
+1bis. **Expériences bas coût** : otoscope USB et COLMAP sur fantôme (7.3) ; mesure de la précision d'un capteur 3D externe candidat sur fantôme d'oreille.
 2. **Banc optique tête A** : choix du module caméra (résolution, cadence, champ), du laser vert 520 nm, du miroir conique, mesure de la résolution réelle.
 3. **Nomenclature des composants et fournisseurs** (caméras 1 mm, lasers, cônes ou DOE, gyroscope), en tenant compte du lieu de développement (Chine).
 4. **Mise à jour de la spécification** (§4.1 et §4.2) après validation des propositions de la section 3.

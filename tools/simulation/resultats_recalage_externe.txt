@@ -1,0 +1,19 @@
+Essai : scan interne (axe par codeur) avec erreur d'échelle eps, puis correction par la partie visible de l'extérieur
+Partie visible : s de 0 à 6 mm, 50 % des points vus, bruit du capteur externe sig_ext (mm), 6 graines.
+Biais de rayon = distance signée moyenne du nuage à la paroi (mm) : > 0 si le conduit paraît trop large.
+Échelle est./idéale = (échelle trouvée par le recalage) x (1+eps) : 1 = échelle parfaitement corrigée.
+
+Conduit          eps sig_ext | avant             | recalage Sim(3)   | échelle seule     |   éch.
+                             |      RMS    biais |      RMS    biais |      RMS    biais | est/id
+droit_conique     0%     0.1 |    0.276    0.007 |    0.404    0.025 |    0.275    0.007 |  1.000
+droit_conique     0%     0.5 |    0.276    0.007 |    0.632    0.048 |    0.278    0.005 |  0.999
+droit_conique     1%     0.1 |    0.282    0.039 |    0.361    0.021 |    0.276    0.011 |  1.001
+droit_conique     1%     0.5 |    0.282    0.039 |    0.547    0.040 |    0.280    0.017 |  1.003
+droit_conique     3%     0.1 |    0.305    0.103 |    0.398    0.028 |    0.279    0.030 |  1.007
+droit_conique     3%     0.5 |    0.305    0.103 |    0.379    0.032 |    0.286    0.038 |  1.010
+realiste          0%     0.1 |    0.722    0.073 |    0.870    0.104 |    0.722    0.066 |  0.998
+realiste          0%     0.5 |    0.722    0.073 |    0.937    0.104 |    0.726    0.056 |  0.994
+realiste          1%     0.1 |    0.719    0.105 |    0.831    0.094 |    0.722    0.070 |  0.999
+realiste          1%     0.5 |    0.719    0.105 |    0.877    0.112 |    0.725    0.069 |  0.999
+realiste          3%     0.1 |    0.720    0.170 |    0.776    0.079 |    0.721    0.079 |  1.002
+realiste          3%     0.5 |    0.720    0.170 |    0.733    0.068 |    0.722    0.080 |  1.002
