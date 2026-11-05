@@ -1,0 +1,26 @@
+Simulateur du scanner à anneau laser : 6 graines, biais gyroscope 0.05 °/s, inclinaison de la sonde 2.0°, bruit de mesure 0.020 mm
+Moyenne (écart-type) sur les graines. Axe final = erreur de position axiale à la fin du retrait (|mm|).
+
+Conduit « realiste » (158 images environ par retrait)
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+poses vraies    0.019 (0.000)  0.038 (0.000)   0.000 (0.000)   0.000 (0.000)   0.000 (0.000)
+E codeur+ICP    0.716 (0.035)  1.525 (0.102)   0.473 (0.103)   1.065 (0.059)   0.409 (0.151)
+V odom.+ICP     0.715 (0.038)  1.525 (0.104)   0.508 (0.131)   1.065 (0.064)   0.409 (0.151)
+E codeur+centre   0.229 (0.070)  0.439 (0.120)   0.101 (0.074)   0.328 (0.113)   0.409 (0.151)
+V odom.+centre   0.230 (0.072)  0.440 (0.124)   0.123 (0.068)   0.328 (0.116)   0.409 (0.151)
+T suivi ext.    0.140 (0.035)  0.264 (0.057)   0.110 (0.048)   0.197 (0.050)   0.157 (0.043)
+F fusion        0.111 (0.036)  0.212 (0.058)   0.111 (0.066)   0.154 (0.051)   0.065 (0.017)
+I ICP seul      0.697 (0.090)  1.407 (0.215)   3.507 (1.771)   1.039 (0.139)   0.409 (0.151)
+
+Conduit « droit_conique » (158 images environ par retrait)
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+poses vraies    0.019 (0.000)  0.038 (0.000)   0.000 (0.000)   0.000 (0.000)   0.000 (0.000)
+E codeur+ICP    0.187 (0.050)  0.357 (0.097)   0.090 (0.029)   0.275 (0.080)   0.412 (0.152)
+V odom.+ICP     0.187 (0.050)  0.358 (0.098)   0.124 (0.089)   0.275 (0.080)   0.412 (0.152)
+E codeur+centre   0.233 (0.062)  0.450 (0.101)   0.046 (0.026)   0.339 (0.098)   0.412 (0.152)
+V odom.+centre   0.233 (0.061)  0.451 (0.102)   0.096 (0.077)   0.340 (0.098)   0.412 (0.152)
+T suivi ext.    0.136 (0.038)  0.258 (0.060)   0.110 (0.048)   0.191 (0.054)   0.157 (0.043)
+F fusion        0.107 (0.040)  0.203 (0.063)   0.111 (0.066)   0.148 (0.057)   0.065 (0.017)
+I ICP seul      0.238 (0.044)  0.481 (0.114)   3.937 (1.998)   0.301 (0.055)   0.412 (0.152)
+
+Temps de calcul : 47 s

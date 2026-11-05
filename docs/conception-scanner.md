@@ -126,6 +126,26 @@ Lecture :
 3. **Limites de cet estimateur** : il suppose que la sonde reste alignée sur le conduit à quelques degrés près. Sensibilité à l'inclinaison de la sonde simulée : faible (0,21 à 0,25 mm de 0,5° à 2°). L'erreur restante vient surtout de l'estimation de la direction du conduit (gyroscope, filtre de courbure). Le coefficient de filtrage de la courbure a été choisi parmi trois valeurs sur les mêmes graines : léger réglage sur les données de test.
 4. **Les coudes simulés sont des coudes que j'ai choisis** (deux coudes opposés de 29° et 26°, rayon de courbure minimal de l'ordre de 9 mm) : à remplacer par des courbures mesurées sur de vraies oreilles.
 
+### Fusion du suivi externe et du suivi du centre (v0.3 du simulateur)
+Configuration F : le suivi du centre de la lumière (axe par odométrie visuelle, courbure par gyroscope) fournit la position image par image ; le suivi externe de la poignée la recale en douceur (gain 0,3 en position, 0,05 en orientation) quand il voit la poignée. Le calcul est causal (pas d'interpolation sur les images futures). Erreur RMS du nuage (mm) :
+
+| Scénario | Suivi du centre seul (V) | Suivi externe seul (T) | **Fusion (F)** |
+|---|---|---|---|
+| Nominal (bruit 0,04 mm, erreur main-pointe 0,05 mm), avec coudes | 0,25 | **0,075** | 0,080 |
+| Nominal, conduit droit | 0,26 | **0,074** | 0,079 |
+| Deux occultations de 25 images (environ un tiers du retrait), avec coudes | 0,23 | 0,153 | **0,106** |
+| Deux occultations, conduit droit | 0,23 | 0,148 | **0,103** |
+| Suivi dégradé (bruit 0,1 mm, erreur main-pointe 0,1 mm), avec coudes | 0,23 | 0,140 | **0,111** |
+| Suivi dégradé, conduit droit | 0,23 | 0,136 | **0,107** |
+| Gyroscope 10 fois moins bon (0,5 °/s), avec coudes | 0,30 | **0,069** | 0,077 |
+
+Lecture :
+1. **Sans panne, la fusion n'améliore pas le suivi externe** (0,080 contre 0,075 mm) : le suivi externe domine, la fusion ne fait que le lisser.
+2. **La fusion apporte de la robustesse** : avec occultations ou avec un suivi dégradé, l'erreur passe de 0,14-0,15 à 0,10-0,11 mm. Elle est causale, alors que le suivi seul est interpolé après coup : l'avantage est donc plutôt sous-estimé.
+3. **Orientation** : 0,06° pour la fusion contre 0,18° pour le suivi externe seul (nominal) ; avec un gyroscope dix fois moins bon, 0,57° pour la fusion (le gyroscope pèse alors plus).
+4. **Aucune configuration ne passe sous 0,10 mm quand le suivi est dégradé ou masqué** : le budget nominal de 0,10 mm RMS n'est tenu que sous les hypothèses nominales d'étalonnage du suivi externe. La qualité de ce suivi (erreur main-pointe, bruit, taux d'occultation) est donc le facteur dominant.
+5. **Limites** : gain de fusion choisi parmi trois valeurs (0,1 ; 0,2 ; 0,3) sur 3 graines ; modèle de suivi simple (bruit, biais constant, dérive lente ; pas de latence, de désynchronisation, de valeurs aberrantes ni de mouvement de la tête au-delà de la dérive) ; occultations en rafales régulières.
+
 ### Ce que ces résultats indiquent
 1. **Le contrôle du simulateur est correct** : avec les poses vraies, l'erreur vaut le bruit de mesure (0,019 mm).
 2. **Le recalage de surface seul ne donne pas la longueur** : l'axe dérive de 4 à 5 mm sur 24 mm (environ 18 %), conduit conique ou non. Confirme R1 pour l'axe.
@@ -142,8 +162,8 @@ Lecture :
 ### Conséquences pour la conception
 - **La spécification (§4.2 « IMU + ICP ») est insuffisante** : à retenir pour la mise à jour de la spécification.
 - **Le banc de la phase 1 ne peut pas se limiter à un codeur linéaire** si les fantômes ont des coudes : il faut une référence de pose en 6 degrés de liberté (bras motorisé, table à plusieurs axes ou suivi externe de référence).
-- **Le suivi externe de la poignée (option T3 du plan) reste la base de référence** pour la phase 1. Le suivi du centre de la lumière avec gyroscope est la meilleure option sans suivi externe (0,25 mm avec coudes) mais ne tient pas encore le budget ; sa dérive restante est à comparer sur banc.
-- Prochaines étapes pour le simulateur : fusion du suivi du centre et du suivi externe, coudes réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
+- **Le suivi externe de la poignée (option T3 du plan) reste la base de référence** pour la phase 1, **complété par le gyroscope et le suivi du centre de la lumière** (fusion F) pour tenir les occultations et un suivi imparfait. Le suivi du centre de la lumière avec gyroscope est la meilleure option sans suivi externe (0,25 mm avec coudes) mais ne tient pas encore le budget ; sa dérive restante est à comparer sur banc.
+- Prochaines étapes pour le simulateur : latence et désynchronisation du suivi, valeurs aberrantes, mouvement de la tête, coudes réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
 
 ## 7. Photogrammétrie, échelle et recalage sur la partie visible
 

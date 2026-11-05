@@ -205,17 +205,44 @@ def local_ring(tr, Bz):
     r, a = tr["rho"], tr["alpha"][None, :]
     return np.stack([r*np.cos(a), r*np.sin(a), np.full_like(r, Bz)], 2)   # (F, Rn, 3)
 
-def gyro_orientation(tr, rng, P):
+def gyro_increments(tr, rng, P):
+    """Rotations mesurées par le gyroscope entre images successives (biais constant + bruit)."""
     nf, dt = tr["nf"], tr["dt"]
     Rt = tr["R"]
     bias = P["gyro_bias"]*DEG*rng.standard_normal(3)
     arw = P["gyro_arw"]*DEG
-    Re = np.zeros_like(Rt); Re[0] = Rt[0]
+    incs = [np.eye(3)]
     for k in range(1, nf):
         dth = log_so3(Rt[k-1].T @ Rt[k])
-        meas = dth + bias*dt + arw*np.sqrt(dt)*rng.standard_normal(3)
-        Re[k] = Re[k-1] @ exp_so3(meas)
+        incs.append(exp_so3(dth + bias*dt + arw*np.sqrt(dt)*rng.standard_normal(3)))
+    return incs
+
+def gyro_orientation(tr, rng, P):
+    incs = gyro_increments(tr, rng, P)
+    Re = np.zeros_like(tr["R"]); Re[0] = tr["R"][0]
+    for k in range(1, tr["nf"]):
+        Re[k] = Re[k-1] @ incs[k]
     return Re
+
+def masque_occultation(nf, rng, P):
+    """Vrai si le suivi externe voit la poignée. Rafales d'occultation de P['occl_len'] images."""
+    ok = np.ones(nf, dtype=bool)
+    for _ in range(P["occl_bursts"]):
+        d = int(rng.integers(P["k0"]+5, max(P["k0"]+6, nf-P["occl_len"])))
+        ok[d:d+P["occl_len"]] = False
+    return ok
+
+def mesures_suivi(tr, rng, P):
+    """Pose absolue mesurée par le suivi externe : bruit, erreur d'étalonnage main-pointe, dérive."""
+    nf = tr["nf"]
+    Ot, Rt = tr["O"], tr["R"]
+    he = P["trk_handeye"]*rng.standard_normal(3)
+    drift = np.stack([ar1(rng, nf, 1-tr["dt"]/1.0, P["trk_drift"]) for _ in range(3)], 1)
+    Rm = np.zeros_like(Rt); pm = np.zeros_like(Ot)
+    for k in range(nf):
+        Rm[k] = Rt[k] @ exp_so3(P["trk_rot"]*DEG*rng.standard_normal(3))
+        pm[k] = Ot[k] + he + drift[k] + P["trk_pos"]*rng.standard_normal(3)
+    return pm, Rm
 
 HARM = 4   # nombre d'harmoniques azimutales du modèle local de surface
 
@@ -237,13 +264,46 @@ def run_config(tr, cfg, rng, P):
     if cfg == "ref":
         pe, Re = Ot.copy(), Rt.copy()
     elif cfg == "T":
-        Re = np.zeros_like(Rt)
-        pe = np.zeros_like(Ot)
-        he = P["trk_handeye"]*rng.standard_normal(3)
-        drift = np.stack([ar1(rng, nf, 1-tr["dt"]/1.0, P["trk_drift"]) for _ in range(3)], 1)
+        pm, Rm = mesures_suivi(tr, rng, P)
+        ok = masque_occultation(nf, rng, P)
+        pe, Re = pm.copy(), Rm.copy()
+        valid = np.flatnonzero(ok)
+        for k in np.flatnonzero(~ok):      # interpolation entre les images vues (traitement différé)
+            a_ = valid[valid < k][-1] if np.any(valid < k) else valid[0]
+            b_ = valid[valid > k][0] if np.any(valid > k) else valid[-1]
+            w_ = 0.0 if b_ == a_ else (k-a_)/(b_-a_)
+            pe[k] = (1-w_)*pm[a_] + w_*pm[b_]
+            Re[k] = Rm[a_] @ exp_so3(w_*log_so3(Rm[a_].T @ Rm[b_]))
+    elif cfg == "F":
+        # Fusion : suivi du centre de la lumière (axe par odométrie visuelle, courbure par gyroscope),
+        # recalé en douceur sur le suivi externe quand celui-ci voit la poignée.
+        pm, Rm = mesures_suivi(tr, rng, P)
+        ok = masque_occultation(nf, rng, P)
+        incs = gyro_increments(tr, rng, P)
+        scale = P["vo_scale"]*rng.standard_normal()
+        Re = np.zeros_like(Rt); pe = np.zeros_like(Ot)
+        cen = np.stack([loc[:, :, 0].mean(1), loc[:, :, 1].mean(1), np.full(nf, Bz)], 1)
+        kf = np.zeros(2); kap = np.zeros((nf, 2))
+        gp, gr = P["fus_pos"], P["fus_rot"]
         for k in range(nf):
-            Re[k] = Rt[k] @ exp_so3(P["trk_rot"]*DEG*rng.standard_normal(3))
-            pe[k] = Ot[k] + he + drift[k] + P["trk_pos"]*rng.standard_normal(3)
+            if k < P["k0"]:
+                pe[k], Re[k] = Ot[k], Rt[k]
+                continue
+            Rg = Re[k-1] @ incs[k]
+            Re[k] = Rg @ exp_so3(gr*log_so3(Rg.T @ Rm[k])) if ok[k] else Rg
+            dzt = (Ot[k]-Ot[k-1]) @ Rt[k][:, 2]
+            dz = dzt*(1+scale) + P["vo_sigma"]*rng.standard_normal()
+            w = log_so3(Re[k-1].T @ Re[k])
+            kf = (1-P["kappa_alpha"])*kf + P["kappa_alpha"]*np.array([w[1], -w[0]])/dz
+            kap[k] = kf
+            u1 = np.array([kf[0]*Bz, kf[1]*Bz, 1.0]); u1 /= np.linalg.norm(u1)
+            u0 = np.array([kap[k-1][0]*Bz, kap[k-1][1]*Bz, 1.0]); u0 /= np.linalg.norm(u0)
+            dirw = Re[k]@u1 + Re[k-1]@u0
+            dirw /= np.linalg.norm(dirw)
+            full = Re[k-1] @ cen[k-1] - Re[k] @ cen[k] + dz*dirw
+            lat = Re[k].T @ (full - Re[k][:, 2]*dz)
+            pp = pe[k-1] + Re[k][:, 2]*dz + Re[k] @ np.array([lat[0], lat[1], 0.0])
+            pe[k] = pp + gp*(pm[k]-pp) if ok[k] else pp
     elif cfg in ("Ec", "Vc"):
         # Suivi du centre de la lumière. Le centre de l'anneau (situé à la distance B devant la sonde) avance
         # le long de la tangente du conduit à cet endroit : celle-ci est la direction de la sonde tournée de
@@ -433,14 +493,17 @@ def parametres(args):
     return dict(dt=1/30., nframes=400, nrays=72, B=3.5, v0=5.0, s_start=26.0, s_end=2.0,
                 sigma_m=0.02, gyro_bias=args.biais_gyro, gyro_arw=0.01,
                 enc_sigma=0.005, vo_sigma=0.01, vo_scale=0.003, icp_prior_ax=0.3, lat_prior=0.15,
-                trk_pos=0.04, trk_handeye=0.05, trk_drift=0.03, trk_rot=0.1,
-                k0=15, kmodel=KM, ordre=ORD, kappa_alpha=0.15, tilt=args.inclinaison)
+                trk_pos=args.bruit_suivi, trk_handeye=args.erreur_main_pointe, trk_drift=0.03, trk_rot=0.1,
+                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--graines", type=int, default=6)
     ap.add_argument("--biais-gyro", type=float, default=0.05, help="biais résiduel du gyroscope, °/s (écart-type)")
     ap.add_argument("--inclinaison", type=float, default=2.0, help="inclinaison aléatoire de la sonde, écart-type en degrés")
+    ap.add_argument("--occultation", type=int, default=0, help="nombre de rafales d'occultation du suivi externe (25 images chacune)")
+    ap.add_argument("--bruit-suivi", type=float, default=0.04, help="bruit du suivi externe par image, mm")
+    ap.add_argument("--erreur-main-pointe", type=float, default=0.05, help="erreur d'étalonnage main-pointe du suivi externe, mm")
     ap.add_argument("--conduits", default="realiste,droit_conique,droit_cylindre,relief")
     ap.add_argument("--sortie", default=None)
     ap.add_argument("--test-externe", action="store_true", help="essai de recalage sur la partie visible du conduit")
@@ -450,7 +513,7 @@ def main():
     if args.test_externe:
         test_externe(args, P)
         return
-    cfgs = ["ref", "E", "V", "Ec", "Vc", "T", "I"]
+    cfgs = ["ref", "E", "V", "Ec", "Vc", "T", "F", "I"]
     lignes = []
     def out(s=""):
         print(s); lignes.append(s)
@@ -472,7 +535,7 @@ def main():
                 res[c].append(metriques(canal, tr, pe, Re, q, P))
         out("\nConduit « %s » (%d images environ par retrait)" % (nom, int(np.mean(nfr))))
         out("%-6s %17s %13s %15s %15s %15s" % ("Config", "RMS surface (mm)", "95e c. (mm)", "Axe final (mm)", "Latéral RMS", "Orient. fin (°)"))
-        lab = {"ref": "poses vraies", "E": "E codeur+ICP", "V": "V odom.+ICP", "Ec": "E codeur+centre", "Vc": "V odom.+centre", "T": "T suivi ext.", "I": "I ICP seul"}
+        lab = {"ref": "poses vraies", "E": "E codeur+ICP", "V": "V odom.+ICP", "Ec": "E codeur+centre", "Vc": "V odom.+centre", "T": "T suivi ext.", "F": "F fusion", "I": "I ICP seul"}
         for c in cfgs:
             m = {k: np.array([r[k] for r in res[c]]) for k in res[c][0]}
             f = lambda k: "%6.3f (%5.3f)" % (m[k].mean(), m[k].std())
