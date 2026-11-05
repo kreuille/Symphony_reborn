@@ -111,7 +111,7 @@ Non chiffré à ce stade. Postes à chiffrer plus tard : matériel (3 scanners p
 | Participation insuffisante des laboratoires | Technicien référent désigné, contrepartie claire, réunions courtes et régulières |
 | Cérumen, poils, conduits très coudés | Nettoyage préalable, enregistrer les échecs pour améliorer le filtrage |
 | Panne du prototype chez un partenaire | Pièces de rechange, support rapide, deuxième sonde par site |
-| Brevets tiers sur la sonde (FTO différé) | Risque accepté pour l'instant ; revue obligatoire avant la fabrication des prototypes pour sites tiers (gate M5) et avant tout accord de pilote |
+| Brevets tiers sur la sonde (étude FTO lancée) | Résultats de l'étude à intégrer ; revue obligatoire avant la fabrication des prototypes pour sites tiers (gate M5) et avant tout accord de pilote |
 | Licence du logiciel tiers (3Shape ou autre) | Vérifier d'avance les conditions d'intégration et d'utilisation des données |
 | Fuite ou mauvaise gestion des données | Pseudonymisation, chiffrement, accès restreint, accord écrit |
 | Résultats trop dépendants du technicien | Protocole standardisé, formation commune, plusieurs techniciens par site |

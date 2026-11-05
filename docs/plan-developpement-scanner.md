@@ -2,7 +2,7 @@
 
 **Principe** : le scanner est la pièce maîtresse de la solution. Ce plan organise son développement de façon à lever d'abord le risque principal (le suivi de pose), à avancer sur le logiciel avant que le matériel existe, et à décider par critères chiffrés.
 
-**Cohérence avec le dépôt** : ce plan complète `specs/scanner-spec-prototype.md` et `specs/scanner-plan-pilote.md` et respecte `DECISIONS.md` : budget d'erreur de la chaîne de 0,2 mm RMS (scanner : 0,10 nominal, seuil Go 0,15), impression sur machines à capsules SprintRay, FTO différé avec revue obligatoire à la gate M5, aucun budget chiffré avant la phase 0. Les durées et seuils ci-dessous sont des **hypothèses de travail** ; en cas de divergence, la spécification et le calendrier maître font foi.
+**Cohérence avec le dépôt** : ce plan complète `specs/scanner-spec-prototype.md` et `specs/scanner-plan-pilote.md` et respecte `DECISIONS.md` : budget d'erreur de la chaîne de 0,2 mm RMS (scanner : 0,10 nominal, seuil Go 0,15), impression sur machines à capsules SprintRay, étude FTO lancée le 5 novembre 2026 (décision 4 mise à jour), revue obligatoire à la gate M5, aucun budget chiffré avant la phase 0. Les durées et seuils ci-dessous sont des **hypothèses de travail** ; en cas de divergence, la spécification et le calendrier maître font foi.
 
 ## 1. Cibles de performance (hypothèses)
 
@@ -31,7 +31,7 @@ Un anneau laser ne donne qu'une tranche à la fois. Tout l'assemblage dépend de
 **Recommandation** :
 1. **Simuler d'abord T2** (semaines 1 à 4) : si la simulation montre une ambiguïté axiale non résoluble, on le sait avant d'avoir dépensé en matériel.
 2. **Construire T3 comme référence de repli** : le plus rapide à rendre fonctionnel.
-3. T1 sert seulement de comparaison ; son recours dépendra de la revue brevets de la gate M5. T4 est écarté de la phase 1.
+3. T1 sert seulement de comparaison ; son recours dépendra de la revue brevets de la gate M5 et des résultats de l'étude FTO. T4 est écarté de la phase 1.
 4. Une combinaison T2 + repère externe léger est probablement la solution finale.
 
 ## 3. Lots de travail
@@ -62,7 +62,7 @@ Normes à examiner avec un expert (à confirmer selon le marché) : ISO 14971 (g
 
 | Période | Contenu | Porte de décision |
 |---|---|---|
-| **Mois 0** | Recrutement ou contractualisation de l'équipe ; achat du matériel de base ; veille brevets légère (les brevets de `etude-otoscan.md`), sans étude FTO | — |
+| **Mois 0** | Recrutement ou contractualisation de l'équipe ; achat du matériel de base ; veille brevets légère (les brevets de `etude-otoscan.md`), et suivi de l'étude FTO (lancée) | — |
 | **M0-M3 (phase 1)** | Simulateur ; banc optique (WP1, WP4) ; fantômes ; comparaison T2 / T3 ; premier maillage de fantôme | **Porte 1** : erreur RMS sur fantômes ; choix du suivi |
 | **M3-M9** (à caler sur la gate M5 : revue brevets obligatoire avant tout prototype chez un tiers) | Sonde manuelle v1 ; firmware ; reconstruction temps réel ; IA v1 ; complétude et profondeur ; fantômes souples | **Porte 2** : cibles du §1 atteintes ; mesures répétables par plusieurs opérateurs |
 | **M9-M15** | Pilote laboratoires (30 à 300 oreilles) avec cadre réglementaire défini ; collecte pour l'IA ; interface avec la CAO automatique | **Porte 3** : comparaison au silicone ; taux de remake |
@@ -91,7 +91,7 @@ Environ 6 à 8 personnes à pleine charge. Les ingénieurs en Chine réduisent f
 | Risque | Réponse |
 |---|---|
 | Suivi de pose imprécis ou dérivant | Simulation en premier ; T3 en repli ; critères de porte 1 |
-| Brevets bloquants (anneau laser, suivi, caméra grand angle) | Risque accepté pour le moment (décision 4) ; revue obligatoire à la gate M5 ; contournement de conception ; veille |
+| Brevets bloquants (anneau laser, suivi, caméra grand angle) | Étude FTO lancée (décision 4) ; revue obligatoire à la gate M5 ; contournement de conception ; veille |
 | Miniaturisation (capteur, optique, laser dans une pointe fine) | Banc d'abord, pointe réelle ensuite ; plusieurs fournisseurs de modules |
 | Reflets, cérumen, poils, humidité | Longueur d'onde et filtrage ; IA ; contre-indications ; scénarios dans les fantômes |
 | Mouvement du patient (tête, mâchoire) | Clip de compensation ; scans mâchoire ouverte et fermée au début |
@@ -101,7 +101,7 @@ Environ 6 à 8 personnes à pleine charge. Les ingénieurs en Chine réduisent f
 
 ## 8. Premiers 30 jours
 
-1. Veille brevets légère sur la famille United Sciences (voir `etude-otoscan.md`) ; la décision de différer l'étude FTO reste en vigueur jusqu'à la gate M5.
+1. Commander l'étude FTO (cahier des charges prêt, brevets de `etude-otoscan.md` en tête de liste) : choisir le cabinet, signer le NDA, envoyer l'architecture sans détails d'invention non déposée.
 2. Définir précisément la cible (cahier des charges produit : taille de pointe, type d'appareils visés, utilisateur).
 3. Construire le simulateur minimal : sonde virtuelle, conduit 3D, image laser, vérité terrain.
 4. Commander le matériel du banc : modules caméra, diodes laser, éléments diffractifs ou cônes, IMU, platines de translation et rotation.
@@ -109,10 +109,14 @@ Environ 6 à 8 personnes à pleine charge. Les ingénieurs en Chine réduisent f
 6. Chercher l'ingénieur optique et l'ingénieur vision 3D (ou un bureau d'études partenaire).
 7. Valider avec un expert en dispositifs médicaux le statut réglementaire probable.
 
-## 9. Décisions attendues de vous
+## 9. Décisions prises le 5 novembre 2026 et suites
 
-- Équipe interne, bureau d'études externe, ou mixte ?
-- Localisation du développement : Chine, Europe, ou les deux ?
-- Types d'appareils visés en premier : embouts, coques ITE, ou tous ?
-- Confirmer que le FTO reste différé jusqu'à la gate M5, ou l'avancer compte tenu des brevets de l'Otoscan.
-- Confirmer les cibles chiffrées du §1 après les premiers essais.
+| Question | Réponse | Conséquence pour le plan |
+|---|---|---|
+| Équipe | Mixte : interne et externe | Garder en interne ce qui fait la différence (reconstruction 3D, IA, intégration) ; externaliser l'optique miniature, l'électronique et la mécanique si le recrutement est lent ; fixer les rôles |
+| Lieu | Chine | Fournisseurs de modules caméra, diodes laser, optique et prototypage en local ; recrutement local ; vigilance sur la propriété intellectuelle et sur le cadre de données |
+| Pièces visées | Toutes | Cible de couverture jusqu'au 2ᵉ coude (ITE/IIC) à tenir dès la phase 1 |
+| Enveloppe phase 1 | Pas définie | Pas de chiffre ; à établir après la phase 0 sur devis réels |
+| FTO | Go | Lancer maintenant (voir §8, étape 1) |
+
+Restent à décider : le cabinet FTO (compétence en Chine, UE et US), le bureau d'études externe pour l'optique, la répartition précise interne / externe, et la liste des pièces à valider en premier au pilote.

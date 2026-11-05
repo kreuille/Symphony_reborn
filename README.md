@@ -13,8 +13,8 @@ Statut : propositions de travail, version du 4 novembre 2026. Aucun budget n'est
 | `sources/` | Documents d'origine fournis par Arnaud : stratégie V1, présentation scanner v1, spécification scanner v0.1, plan pilote laboratoires v0.1 |
 | `archive/` | Versions précédentes des documents produits |
 | `DECISIONS.md` | Décisions prises, hypothèses à valider, points ouverts |
-| `docs/presentation-projet-scanner-3D.docx` | Première version de la présentation du scanner, déjà présente dans le dépôt ; remplacée par `docs/presentation-projet-scanner-3D-v2.docx` (capsules SprintRay, FTO différé, budget d'erreur 0,2 mm, aucun budget chiffré) |
-| `docs/cahier-des-charges-FTO.md` | Cahier des charges de l'étude FTO, déjà présent dans le dépôt ; l'étude est différée pour le moment (voir `DECISIONS.md`), son budget et son délai ne sont plus repris dans les autres documents |
+| `docs/presentation-projet-scanner-3D.docx` | Première version de la présentation du scanner, déjà présente dans le dépôt ; remplacée par `docs/presentation-projet-scanner-3D-v2.docx` (capsules SprintRay, FTO alors différé, budget d'erreur 0,2 mm, aucun budget chiffré) |
+| `docs/cahier-des-charges-FTO.md` | Cahier des charges de l'étude FTO, déjà présent dans le dépôt ; l'étude est lancée depuis le 5 novembre 2026 (voir `DECISIONS.md`, décision 4) ; son budget sera fixé sur devis et n'est pas repris dans les autres documents |
 | `docs/plan-developpement-scanner.md` | Plan de développement du scanner : options de suivi de pose (T1 à T4), lots de travail, simulation d'abord, jalons, équipe, risques, 30 premiers jours ; aligné sur `DECISIONS.md` |
 | `docs/etude-otoscan.md` | Étude de référence sur l'Otoscan (Natus/Otometrics) et les brevets United Sciences : performances publiées, enseignements, brevets à examiner à la revue M5 |
 

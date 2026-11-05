@@ -1,6 +1,6 @@
 # Cahier des charges – Étude FTO (Freedom To Operate)
 
-> **Statut : étude différée** (`DECISIONS.md`, décision 4). Ce cahier des charges est conservé pour la revue obligatoire à la gate M5. Les budgets et délais qu'il mentionne sont indicatifs et ne sont plus repris dans les autres documents.
+> **Statut : étude lancée le 5 novembre 2026** (`DECISIONS.md`, décision 4 mise à jour). Prochaine étape : choisir le cabinet et signer le NDA. Les budgets et délais mentionnés ci-dessous sont indicatifs ; le budget de l'étude sera fixé sur devis. Développement localisé en Chine : le cabinet doit couvrir la CNIPA.
 **Projet** : scanner 3D intra-auriculaire + chaîne complète scan → CAO automatique → impression 3D continue
 **Date** : 2026-11-04 | **Statut** : projet à envoyer au cabinet de conseil en PI
 

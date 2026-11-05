@@ -2,7 +2,7 @@
 
 Version 0.2 (brouillon). Les valeurs chiffrées sont des cibles de départ à valider par les premiers essais.
 
-**Décisions intégrées en v0.2 :** (1) l'impression se fait sur les machines à capsules SprintRay (route G1), pas en impression continue ; (2) le scanner contribue au budget d'erreur total de la chaîne de 0,2 mm avec 0,10 mm RMS (voir README) ; (3) pas d'étude FTO pour le moment : le choix des têtes A et B se fait sur des critères techniques, le risque est accepté et à revoir à la gate M5 du calendrier maître.
+**Décisions intégrées en v0.2 :** (1) l'impression se fait sur les machines à capsules SprintRay (route G1), pas en impression continue ; (2) le scanner contribue au budget d'erreur total de la chaîne de 0,2 mm avec 0,10 mm RMS (voir README) ; (3) étude FTO lancée le 5 novembre 2026 (décision 4 de `DECISIONS.md` mise à jour) : le choix des têtes A et B tient compte de ses résultats, avec revue à la gate M5 du calendrier maître.
 
 ## 1. Objectif et périmètre
 
@@ -142,4 +142,4 @@ Estimation de précision (théorique, avant étalonnage) : avec z = 5 mm, base 1
 1. Capteur de référence disponible en interne ou en sous-traitance (micro-CT, scanner industriel) ?
 2. Résine pour l'essai T8 : à choisir avec le projet G1 (imprimante : machine à capsules SprintRay, décidé).
 3. Fournisseurs pour la micro-caméra, le VCSEL et le DOE.
-4. FTO différé (décision actuelle : pas d'étude pour le moment). Le choix de la tête A ou B repose sur les résultats de phase 1. Revoir cette décision au plus tard à la gate M5, avant la fabrication des prototypes destinés à des sites tiers et avant toute divulgation détaillée.
+4. FTO lancé (5 novembre 2026). Le choix de la tête A ou B repose sur les résultats de phase 1 et sur ceux de l'étude FTO. Revue obligatoire au plus tard à la gate M5, avant la fabrication des prototypes destinés à des sites tiers et avant toute divulgation détaillée.
