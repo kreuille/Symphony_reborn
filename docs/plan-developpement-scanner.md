@@ -28,6 +28,8 @@ Un anneau laser ne donne qu'une tranche à la fois. Tout l'assemblage dépend de
 | **T3 – Suivi externe de la poignée** | Caméra(s) fixes voient des repères sur la poignée ; la sonde est rigide donc pointe = pose de la poignée × décalage connu ; clip léger sur l'oreille pour compenser la tête | Sonde simple et légère, matériel peu coûteux | Occultation de la poignée, étalonnage de l'ensemble |
 | **T4 – Retrait motorisé** | Gaine souple, encodeur : mouvement 1D connu, comme un IVUS | Position axiale précise | Confort et sécurité, mécanique lourde ; non prioritaire |
 
+**Mise à jour après calculs** (`conception-scanner.md`) : sur une paroi lisse, le recalage par surface ne contraint ni l'axe, ni l'inclinaison, ni le roulis, que ce soit avec un anneau ou avec un morceau de surface (tête B) ; l'accéléromètre ne peut pas fournir l'axe. L'orientation doit venir du gyroscope et l'axe d'une source à trancher par essais (odométrie visuelle, suivi externe de la poignée). La recommandation ci-dessous est à lire avec cette réserve.
+
 **Recommandation** :
 1. **Simuler d'abord T2** (semaines 1 à 4) : si la simulation montre une ambiguïté axiale non résoluble, on le sait avant d'avoir dépensé en matériel.
 2. **Construire T3 comme référence de repli** : le plus rapide à rendre fonctionnel.
