@@ -136,6 +136,8 @@ Estimation de précision (théorique, avant étalonnage), capteur de 400 px, obj
 
 ## 8. Planning indicatif (12 semaines)
 
+Ordre détaillé des essais, matériel du banc et seuils de décision : `docs/plan-banc-phase1.md`.
+
 | Semaines | Contenu |
 |---|---|
 | 1–2 | Choix des composants, commande des fantômes et des calibres, mise en place de la référence |

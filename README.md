@@ -18,6 +18,7 @@ Statut : propositions de travail, version du 4 novembre 2026. Aucun budget n'est
 | `docs/plan-developpement-scanner.md` | Plan de développement du scanner : options de suivi de pose (T1 à T4), lots de travail, simulation d'abord, jalons, équipe, risques, 30 premiers jours ; aligné sur `DECISIONS.md` |
 | `docs/conception-scanner.md` | Calculs de conception du scanner (observabilité de la pose, géométrie de la tête A, cadence et datation), résultats du simulateur de pose, architecture de pose proposée, paramètres v0.3 ; script, simulateur de pose et résultats dans `tools/simulation/` |
 | `docs/protocole-experience-otoscope-colmap.md` | Protocole d'expérience : otoscope USB bas coût et photogrammétrie (COLMAP) sur fantômes, pour mesurer la faisabilité de l'odométrie visuelle ; outils dans `tools/photogrammetrie/` (export STL des fantômes, analyse des résultats COLMAP) |
+| `docs/plan-banc-phase1.md` | Plan du banc de phase 1 : hypothèses du simulateur à mesurer, matériel (sans prix), ordre des essais T1 à T13, seuils de décision entre les options (a), (b) et (c), formats de données, risques, premiers 15 jours |
 | `docs/analyse-fto-preliminaire.md` | Criblage préliminaire de brevets publics (familles à examiner en priorité, statuts indicatifs, limites, suite à donner) ; ne remplace pas un avis juridique |
 | `docs/etude-otoscan.md` | Étude de référence sur l'Otoscan (Natus/Otometrics) et les brevets United Sciences : performances publiées, enseignements, brevets à examiner à la revue M5 |
 
