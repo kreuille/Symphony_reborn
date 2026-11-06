@@ -277,7 +277,7 @@ Lecture :
 2. Avec ce centrage, le suivi du centre de la lumière **atteint le budget nominal (0,10 mm) sans suivi externe ni clip**, la tête étant compensée par un simple gyroscope sur la base. C'est le seul cas simulé sans suivi externe qui y parvient.
 3. Le centrage peut se faire **sans moteur** (collerette ou structure auto-centrante) : le moteur apporte surtout la reproductibilité, la protection (arrêt, limite de force) et les mains libres.
 4. **Hypothèse non démontrée** : j'ai supposé qu'on obtient 0,05 mm de décentrage et 0,3° d'inclinaison. Aucune conception mécanique ne le garantit ; c'est le point à prouver sur banc.
-5. **Non modélisé** : la **déformation du conduit par le contact** (le conduit est souple ; une collerette ou une gaine en contact peut le dilater de plusieurs dixièmes de millimètre, comme le fait une empreinte au silicone, que l'Otoscan évite en restant sans contact), le confort et l'hygiène (gaine à usage unique), les frottements dans les coudes, la mâchoire.
+5. **La déformation du conduit par le contact** (le conduit est souple ; une collerette ou une gaine en contact peut le dilater, comme le fait une empreinte au silicone, que l'Otoscan évite en restant sans contact) est simulée en 8.5 : elle réduit fortement ce gain. **Non modélisés** : le confort et l'hygiène (gaine à usage unique), les frottements dans les coudes, la mâchoire.
 
 ### 8.3 Avantages et inconvénients
 
@@ -290,9 +290,34 @@ Lecture :
 ### 8.4 Avis
 Intéressant, mais **ce n'est pas le moteur qui compte, c'est le centrage et l'ancrage**. Proposition :
 1. **Phase 1 : un retrait motorisé sur banc**, comme instrument de référence pour les fantômes (il en faut un de toute façon pour valider), sans en faire encore un choix de produit.
-2. **Concevoir et tester des centrages passifs** (collerette souple, trois points de contact, gaine) sur fantômes souples : mesurer le décentrage et l'inclinaison obtenus, et la déformation de la paroi.
+2. **Concevoir et tester des centrages passifs** (collerette souple, trois points de contact, gaine) sur fantômes souples : mesurer le décentrage et l'inclinaison obtenus, et la déformation de la paroi. **La simulation de 8.5 montre qu'un centrage au contact simple ne tient pas le budget** ; prévoir aussi un centrage sans contact (correction active, guide dans la partie externe).
 3. **Décider du moteur plus tard**, selon les gains réels et le surcoût réglementaire d'un dispositif actif.
 4. Étudier un **ancrage de la base sur l'oreille** (type bouchon de concha) pour un repère mécanique, en comparaison du suivi externe avec clip.
+
+### 8.5 Déformation du conduit par un centrage au contact (simulation)
+Le conduit étant souple, un centrage au contact le déforme : la sonde mesure alors un conduit plus large que le conduit au repos. Modèle mécanique volontairement simple, **toutes les valeurs d'entrée sont des hypothèses** (à mesurer) :
+- 3 contacts élastiques de raideur radiale k_f (N/mm) chacun, pressés contre la paroi ; collerette de rayon libre 5,2 mm, donc en contact sur tout le conduit (rayon de 4,8 à 3,0 mm).
+- Raideur radiale locale du conduit k_t (N/mm), pour laquelle je teste deux valeurs, 0,5 (tissu mou) et 2 (plus raide) : je n'ai **pas de mesure** de cette grandeur. En série : la paroi est repoussée de η × (rayon de collerette − rayon de paroi), avec η = k_f / (k_f + k_t).
+- Perturbation latérale de la main : 0,05 N. Décentrage = perturbation / (3 × k_f), avec un plancher de 0,03 mm.
+- Déformation locale (pas de couplage le long de l'axe), isotrope, élastique (pas de viscoélasticité).
+
+Suivi du centre avec axe par codeur, tête mobile compensée par gyroscope, inclinaison 0,3°, vitesse constante de 3 mm/s, 3 graines. Référence sans centrage ni contact (décentrage 0,3 mm) : 0,169 mm. RMS par rapport au conduit **non déformé** (mm) ; biais = distance signée moyenne (conduit mesuré trop large si positif) ; résultats : `tools/simulation/resultats_deformation_contact.txt`.
+
+| k_f (N/mm) | Décentrage (mm) | Tissu mou (k_t = 0,5) : η / biais / RMS | Tissu plus raide (k_t = 2) : η / biais / RMS |
+|---|---|---|---|
+| 0,02 | 0,83 | 0,04 / 0,04 / 0,33 | 0,01 / 0,00 / 0,32 |
+| 0,05 | 0,33 | 0,09 / 0,13 / **0,23** | 0,02 / 0,03 / 0,19 |
+| 0,10 | 0,17 | 0,17 / 0,24 / 0,28 | 0,05 / 0,07 / **0,14** |
+| 0,20 | 0,08 | 0,29 / 0,41 / 0,44 | 0,09 / 0,13 / 0,17 |
+| 0,50 | 0,03 | 0,50 / 0,72 / 0,76 | 0,20 / 0,29 / 0,32 |
+| 1,00 | 0,03 | 0,67 / 0,96 / 1,01 | 0,33 / 0,48 / 0,51 |
+
+Lecture :
+1. **Il existe un compromis.** Un contact souple (k_f petit) déforme peu mais centre mal ; un contact raide centre bien mais dilate le conduit. L'erreur totale passe par un minimum : environ 0,14 mm (k_f = 0,1) pour un tissu plus raide, 0,23 mm (k_f = 0,05) pour un tissu mou.
+2. **Meilleur cas simulé : 0,14 mm, au-dessus du nominal de 0,10 mm** (qui supposait un centrage parfait sans déformation, section 8.2). Avec un tissu mou, un centrage au contact (0,23 mm) est **moins bon que pas de centrage du tout** (0,169 mm).
+3. **Le résultat dépend d'une raideur du conduit que je ne connais pas.** À mesurer en priorité (sur fantôme souple d'abord, puis par une méthode adaptée sur sujets avec le cadre éthique voulu).
+4. **Conséquence** : un centrage au contact simple n'atteint pas le budget ; il faut soit un contact très souple avec une autre source de centrage, soit un centrage sans contact (par exemple correction active du décentrage à partir du centre d'anneau mesuré, ou guide semi-rigide dans la partie externe du conduit), soit le suivi externe de la section 6. Ces trois pistes ne sont pas simulées.
+5. **Limites** : déformation uniquement radiale, élastique et locale ; en réalité le tissu est visco-élastique et la déformation se propage le long de l'axe ; valeurs de perturbation de la main et de raideur de collerette choisies par moi ; coudes inventés.
 
 ## 9. Prochaines étapes de conception
 1. **Simulateur** : version 0.1 faite (sections 6 et 7.2) ; à améliorer (estimateur par fenêtre glissante, coudes réalistes, mâchoire, occultation, biais systématique du capteur externe).

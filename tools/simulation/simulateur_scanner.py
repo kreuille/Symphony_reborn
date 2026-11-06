@@ -100,6 +100,7 @@ class Canal:
         self.e = np.full(n, e0)
         self.phie = 0.3 + 0.04*s
         self.amp, self.lam = amp, 1.5
+        self.deformee, self.eta, self.r_collerette = False, 0.0, 0.0
 
     def interp_frame(self, sp):
         x = (sp-self.S0)/self.DS
@@ -132,6 +133,9 @@ class Canal:
         r = self.R[i]*(1+self.e[i]*np.cos(2*(th-self.phie[i])))
         if self.amp:
             r = r + self.amp*np.cos(2*np.pi*self.s[i]/self.lam)
+        if self.deformee:
+            # paroi repoussée par un centrage au contact : déplacement = eta x interférence avec la collerette
+            r = r + self.eta*np.maximum(0.0, self.r_collerette - r)
         return rho - r
 
     def distance(self, pts, base):
@@ -200,6 +204,7 @@ def gen_truth(canal, rng, P):
     dirs = np.einsum('kij,rj->kri', R, dloc)
     base = np.repeat(canal.index(sp+Bz), nr)
     lo = np.zeros((nf, nr)); hi = np.full((nf, nr), 12.0)
+    canal.deformee, canal.eta, canal.r_collerette = P["deform_eta"] > 0, P["deform_eta"], P["deform_rf"]
     for _ in range(30):
         mid = 0.5*(lo+hi)
         pts = (org[:, None, :] + mid[:, :, None]*dirs).reshape(-1, 3)
@@ -208,6 +213,7 @@ def gen_truth(canal, rng, P):
         lo = np.where(inside, mid, lo)
         hi = np.where(inside, hi, mid)
     rho_true = 0.5*(lo+hi)
+    canal.deformee = False       # la vérité terrain est le conduit non déformé
     rho_meas = rho_true + P["sigma_m"]*rng.standard_normal((nf, nr))
     # mouvement de la tête dans le repère du suivi externe (l'oreille est solidaire de la tête)
     HR = np.tile(np.eye(3), (nf, 1, 1)); Ht = np.zeros((nf, 3))
@@ -495,7 +501,7 @@ def metriques(canal, tr, pe, Re, q, P):
     orient = np.array([np.linalg.norm(log_so3(tr["R"][k].T@Re[k])) for k in range(nf)])/DEG
     return dict(rms=np.sqrt(np.mean(d**2)), p95=np.percentile(np.abs(d), 95),
                 ax_fin=abs(ax[-1]), ax_rms=np.sqrt(np.mean(ax**2)),
-                lat_rms=np.sqrt(np.mean(lat**2)), or_fin=orient[-1])
+                lat_rms=np.sqrt(np.mean(lat**2)), or_fin=orient[-1], biais=np.mean(d))
 
 KM, ORD = 4, 0
 
@@ -588,7 +594,7 @@ def parametres(args):
                 sigma_m=0.02, gyro_bias=args.biais_gyro, gyro_arw=0.01,
                 enc_sigma=0.005, vo_sigma=0.01, vo_scale=0.003, icp_prior_ax=0.3, lat_prior=0.15,
                 trk_pos=args.bruit_suivi, trk_handeye=args.erreur_main_pointe, trk_drift=0.03, trk_rot=0.1,
-                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, decentrage=args.decentrage, var_vitesse=args.variation_vitesse, gate_mm=0.5, gate_deg=1.5, aberrants=args.aberrants, aberrant_mm=1.0, aberrant_deg=3.0, glissement=args.glissement_clip, tete_mm=args.tete_mm, tete_deg=args.tete_deg, comp_tete=(args.compensation_tete == 'oui' and (args.tete_mm > 0 or args.tete_deg > 0)), lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
+                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, deform_eta=0.0, deform_rf=0.0, decentrage=args.decentrage, var_vitesse=args.variation_vitesse, gate_mm=0.5, gate_deg=1.5, aberrants=args.aberrants, aberrant_mm=1.0, aberrant_deg=3.0, glissement=args.glissement_clip, tete_mm=args.tete_mm, tete_deg=args.tete_deg, comp_tete=(args.compensation_tete == 'oui' and (args.tete_mm > 0 or args.tete_deg > 0)), lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
 
 def main():
     ap = argparse.ArgumentParser()
