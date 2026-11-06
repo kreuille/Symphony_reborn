@@ -346,8 +346,27 @@ Arnaud retient le retrait motorisé pour une raison que la simulation de précis
 - **Pourquoi c'est un vrai bénéfice** : vitesse, alignement et geste ne dépendent plus de l'opérateur. Repère de la concurrence : la formation à l'Otoscan demande environ 5 à 7 patients pour être à l'aise et 15 pour être sûr, et 70 % des opérateurs seulement atteignent la profondeur cible sans trou (chiffres du fabricant, sans méthode publiée). Un scan court et reproductible alimente mieux la CAO automatique, réduit les reprises et homogénéise les données du pilote.
 - **Ce que la simulation dit** : le moteur seul ne change pas la précision (vitesse constante seule : 0,269 mm contre 0,246 mm en main libre) ; la précision vient du centrage et de l'alignement. La valeur de l'automatisation doit donc se mesurer autrement : taux de scans complets du premier coup, écart entre opérateurs, durée. D'où l'exigence **P9** et l'essai **T13** de la spécification (v0.4).
 - **Conditions pour un produit** : insertion manuelle, moteur uniquement en retrait, arrêt automatique, limite de force, butée de profondeur ; centrage à résoudre (centrage au contact : déformation du conduit, 0,14 mm au mieux ; centrage actif : 0,106 mm au mieux, non démontré) ; dossier de sécurité et réglementaire d'un dispositif actif.
-- **Architecture recommandée à valider** : retrait motorisé avec centrage de la sonde, **combiné au suivi externe** (option hybride (c) de la spécification, non simulée) : la mécanique centre et aligne la sonde, le suivi fournit la pose absolue et sert de repli.
+- **Architecture recommandée à valider** : retrait motorisé avec centrage de la sonde, **combiné au suivi externe** (option hybride (c) de la spécification, simulée en 8.8) : la mécanique centre et aligne la sonde, le suivi fournit la pose absolue et sert de repli.
 - **Décision** : retrait motorisé = option produit prioritaire ; le suivi externe en main libre reste la référence et le repli en phase 1.
+
+### 8.8 Hybride : retrait motorisé centré avec suivi externe (simulation)
+Combinaison de la section 8.7 : la mécanique centre et aligne la sonde (hypothèses : décentrage 0,05 mm, inclinaison 0,3°, vitesse constante de 3 mm/s, non démontrées) ; le suivi du centre de la lumière avec gyroscopes fournit la pose, recalée par le suivi externe avec clip (fusion). Le **gain de recalage** règle le poids du suivi externe : un gain faible donne plus de poids au suivi du centre. Conduit avec coudes, mouvement lissé, 4 graines. Script : `tools/simulation/etude_hybride.py` ; résultats : `tools/simulation/resultats_hybride.txt`. RMS du nuage (mm) :
+
+| Scénario | Suivi du centre seul | Suivi externe seul | Fusion, gain 0,3 | gain 0,1 | gain 0,03 | **gain 0,01** |
+|---|---|---|---|---|---|---|
+| Tête immobile | 0,092 | 0,074 | 0,062 | **0,060** | 0,064 | 0,073 |
+| Tête mobile, clip glissant de 0,1 mm | 0,100 | 0,143 | 0,119 | 0,108 | 0,096 | **0,090** |
+| Tête mobile, clip glissant de 0,3 mm | 0,100 | 0,304 | 0,265 | 0,239 | 0,170 | **0,100** |
+| Tête mobile, clip 0,1 mm, deux occultations | 0,100 | 0,144 | 0,114 | 0,105 | 0,095 | **0,089** |
+
+Lecture :
+1. **L'hybride bat chacune des deux méthodes seules** quand la tête est immobile (0,060 contre 0,092 et 0,074) et quand la tête bouge avec un clip qui glisse de 0,1 mm (0,090 contre 0,100 et 0,143). Il passe **sous le budget nominal de 0,10 mm**, tête mobile comprise, sous les hypothèses de centrage ci-dessus.
+2. **Le suivi du centre protège du glissement du clip** : avec 0,3 mm de glissement, un gain faible ramène l'erreur au niveau du suivi du centre seul (0,100 mm) au lieu de 0,30 mm pour le suivi externe seul, c'est-à-dire que la mécanique rend le système tolérant à un clip médiocre.
+3. **Le bon gain dépend de la qualité du suivi** : 0,1 sans mouvement de tête, 0,01 avec un clip qui glisse. Un gain fixe ne convient pas à tous les cas ; il faut un **filtre adaptatif** (type Kalman) qui pondère les deux sources selon leur qualité mesurée (non simulé).
+4. **Les occultations du suivi** ne dégradent pas l'hybride à faible gain (0,089 mm).
+5. **Limites** : le centrage (0,05 mm et 0,3°) est une hypothèse, la section 8.5 montre qu'un centrage au contact simple ne l'atteint pas ; gains choisis parmi quatre valeurs sur les mêmes graines ; clip, tête et coudes modélisés de façon simple ; pas de latence, d'aberrants ni de mâchoire dans cet essai.
+
+**Conclusion** : l'architecture « retrait motorisé centré + gyroscopes + suivi externe en fusion adaptative » est la plus prometteuse des architectures simulées (0,09 mm), mais elle suppose de résoudre le centrage mécanique. Le suivi externe en main libre (0,12 mm tête mobile, section 6) reste le repli.
 
 ## 9. Prochaines étapes de conception
 1. **Simulateur** : version 0.1 faite (sections 6 et 7.2) ; à améliorer (estimateur par fenêtre glissante, coudes réalistes, mâchoire, occultation, biais systématique du capteur externe).
