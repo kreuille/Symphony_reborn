@@ -6,6 +6,7 @@ Documents de travail issus de l'étude marché et business de la solution AI Ear
 |---|---|
 | `AI_Ear_Microfactory_Modele_Financier_v0.1.xlsx` | Modèle financier bilingue FR/EN : hypothèses, coût complet par paire, scénarios sur 5 ans, marché, sources, prix, coûts cibles, acompte + capsule |
 | `AI_Ear_Microfactory_Business_Plan_FR.docx` / `_EN.docx` | Business plan (11 pages) |
+| `AI_Ear_Microfactory_Introduction_FR.docx` / `_EN.docx` | Document d'introduction (2 pages) pour une première prise de contact avec un grand fabricant d'aides auditives ; champs `[Société]`, `[Nom, fonction]` et contact à compléter (surlignés en jaune) |
 | `AI_Ear_Microfactory_Pitch_FR.pptx` / `_EN.pptx` | Présentation pitch (24 diapositives) |
 
 ## Modèle retenu
