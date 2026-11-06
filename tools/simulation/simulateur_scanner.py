@@ -156,6 +156,16 @@ def ar1(rng, n, rho, sigma):
         x[k] = rho*x[k-1] + s*rng.standard_normal()
     return x
 
+def lisser(x, alpha=0.3, passes=2):
+    """Filtre passe-bas (moyenne exponentielle, deux passes) en conservant l'écart-type de chaque colonne."""
+    x = np.atleast_2d(x.T).T if x.ndim == 1 else x
+    y = x.copy()
+    for _ in range(passes):
+        for k in range(1, len(y)):
+            y[k] = (1-alpha)*y[k-1] + alpha*y[k]
+    sd0, sd1 = x.std(0), y.std(0)
+    return y*np.where(sd1 > 1e-12, sd0/np.maximum(sd1, 1e-12), 1.0)
+
 def gen_truth(canal, rng, P):
     dt, nf, nr, Bz = P["dt"], P["nframes"], P["nrays"], P["B"]
     xv = ar1(rng, nf, 0.95, 1.0)
@@ -173,6 +183,9 @@ def gen_truth(canal, rng, P):
     lat = np.clip(lat, -0.8, 0.8)
     tilt = np.stack([ar1(rng, nf, rho_l, P["tilt"]*DEG), ar1(rng, nf, rho_l, P["tilt"]*DEG)], 1)
     roll = ar1(rng, nf, 1-dt/2.0, 20*DEG)
+    if P["lisse"]:      # mouvement de la main sans composante saccadée à la cadence d'image
+        lat, tilt, roll = lisser(lat), lisser(tilt), lisser(roll)[:, 0]
+        lat = np.clip(lat, -0.8, 0.8)
     O = np.zeros((nf, 3)); R = np.zeros((nf, 3, 3)); Tt = np.zeros((nf, 3))
     for k in range(nf):
         c, T, N, B = canal.interp_frame(sp[k])
@@ -232,16 +245,37 @@ def masque_occultation(nf, rng, P):
         ok[d:d+P["occl_len"]] = False
     return ok
 
+def interp_pose(P_arr, R_arr, x):
+    """Pose interpolée à l'indice fractionnaire x (position linéaire, rotation par exp/log)."""
+    n = len(P_arr)
+    x = min(max(x, 0.0), n-1.0)
+    i0 = int(np.floor(x)); i1 = min(i0+1, n-1); w = x-i0
+    return (1-w)*P_arr[i0] + w*P_arr[i1], R_arr[i0] @ exp_so3(w*log_so3(R_arr[i0].T @ R_arr[i1]))
+
+def decaler(pe, Re, decalage):
+    """Réassigne une série de poses à des indices décalés (décalage en images)."""
+    po, Ro = np.zeros_like(pe), np.zeros_like(Re)
+    for j in range(len(pe)):
+        po[j], Ro[j] = interp_pose(pe, Re, j+decalage)
+    return po, Ro
+
+def latence_compensee(P):
+    """Latence supposée connue par l'algorithme (s) : latence vraie moins la désynchronisation résiduelle."""
+    return max(0.0, P["trk_lat"]-P["trk_desync"])
+
 def mesures_suivi(tr, rng, P):
-    """Pose absolue mesurée par le suivi externe : bruit, erreur d'étalonnage main-pointe, dérive."""
+    """Pose absolue mesurée par le suivi externe : bruit, erreur d'étalonnage main-pointe, dérive,
+    et latence (la pose mesurée à l'image k est celle de l'instant k*dt - latence)."""
     nf = tr["nf"]
     Ot, Rt = tr["O"], tr["R"]
     he = P["trk_handeye"]*rng.standard_normal(3)
     drift = np.stack([ar1(rng, nf, 1-tr["dt"]/1.0, P["trk_drift"]) for _ in range(3)], 1)
     Rm = np.zeros_like(Rt); pm = np.zeros_like(Ot)
+    lat_im = P["trk_lat"]/tr["dt"]
     for k in range(nf):
-        Rm[k] = Rt[k] @ exp_so3(P["trk_rot"]*DEG*rng.standard_normal(3))
-        pm[k] = Ot[k] + he + drift[k] + P["trk_pos"]*rng.standard_normal(3)
+        p0, R0 = interp_pose(Ot, Rt, k-lat_im)
+        Rm[k] = R0 @ exp_so3(P["trk_rot"]*DEG*rng.standard_normal(3))
+        pm[k] = p0 + he + drift[k] + P["trk_pos"]*rng.standard_normal(3)
     return pm, Rm
 
 HARM = 4   # nombre d'harmoniques azimutales du modèle local de surface
@@ -274,6 +308,7 @@ def run_config(tr, cfg, rng, P):
             w_ = 0.0 if b_ == a_ else (k-a_)/(b_-a_)
             pe[k] = (1-w_)*pm[a_] + w_*pm[b_]
             Re[k] = Rm[a_] @ exp_so3(w_*log_so3(Rm[a_].T @ Rm[b_]))
+        pe, Re = decaler(pe, Re, latence_compensee(P)/tr["dt"])
     elif cfg == "F":
         # Fusion : suivi du centre de la lumière (axe par odométrie visuelle, courbure par gyroscope),
         # recalé en douceur sur le suivi externe quand celui-ci voit la poignée.
@@ -290,7 +325,13 @@ def run_config(tr, cfg, rng, P):
                 pe[k], Re[k] = Ot[k], Rt[k]
                 continue
             Rg = Re[k-1] @ incs[k]
-            Re[k] = Rg @ exp_so3(gr*log_so3(Rg.T @ Rm[k])) if ok[k] else Rg
+            d_im = latence_compensee(P)/tr["dt"]
+            if ok[k]:
+                Rh = np.concatenate([Re[:k], Rg[None]]); Ph = np.concatenate([pe[:k], pe[k-1][None]])
+                _, R_at = interp_pose(Ph, Rh, k-d_im)
+                Re[k] = Rg @ exp_so3(gr*log_so3(R_at.T @ Rm[k]))
+            else:
+                Re[k] = Rg
             dzt = (Ot[k]-Ot[k-1]) @ Rt[k][:, 2]
             dz = dzt*(1+scale) + P["vo_sigma"]*rng.standard_normal()
             w = log_so3(Re[k-1].T @ Re[k])
@@ -303,7 +344,12 @@ def run_config(tr, cfg, rng, P):
             full = Re[k-1] @ cen[k-1] - Re[k] @ cen[k] + dz*dirw
             lat = Re[k].T @ (full - Re[k][:, 2]*dz)
             pp = pe[k-1] + Re[k][:, 2]*dz + Re[k] @ np.array([lat[0], lat[1], 0.0])
-            pe[k] = pp + gp*(pm[k]-pp) if ok[k] else pp
+            if ok[k]:
+                Ph = np.concatenate([pe[:k], pp[None]]); Rh = np.concatenate([Re[:k], Re[k][None]])
+                p_at, _ = interp_pose(Ph, Rh, k-d_im)
+                pe[k] = pp + gp*(pm[k]-p_at)
+            else:
+                pe[k] = pp
     elif cfg in ("Ec", "Vc"):
         # Suivi du centre de la lumière. Le centre de l'anneau (situé à la distance B devant la sonde) avance
         # le long de la tangente du conduit à cet endroit : celle-ci est la direction de la sonde tournée de
@@ -490,11 +536,11 @@ def test_externe(args, P):
             fh.write("\n".join(out_l)+"\n")
 
 def parametres(args):
-    return dict(dt=1/30., nframes=400, nrays=72, B=3.5, v0=5.0, s_start=26.0, s_end=2.0,
+    return dict(dt=1/30., nframes=400, nrays=72, B=3.5, v0=args.vitesse, s_start=26.0, s_end=2.0,
                 sigma_m=0.02, gyro_bias=args.biais_gyro, gyro_arw=0.01,
                 enc_sigma=0.005, vo_sigma=0.01, vo_scale=0.003, icp_prior_ax=0.3, lat_prior=0.15,
                 trk_pos=args.bruit_suivi, trk_handeye=args.erreur_main_pointe, trk_drift=0.03, trk_rot=0.1,
-                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
+                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
 
 def main():
     ap = argparse.ArgumentParser()
@@ -504,6 +550,10 @@ def main():
     ap.add_argument("--occultation", type=int, default=0, help="nombre de rafales d'occultation du suivi externe (25 images chacune)")
     ap.add_argument("--bruit-suivi", type=float, default=0.04, help="bruit du suivi externe par image, mm")
     ap.add_argument("--erreur-main-pointe", type=float, default=0.05, help="erreur d'étalonnage main-pointe du suivi externe, mm")
+    ap.add_argument("--latence-suivi", type=float, default=0.0, help="latence du suivi externe, ms")
+    ap.add_argument("--desynchro", type=float, default=0.0, help="part de la latence non compensée par l'algorithme, ms")
+    ap.add_argument("--vitesse", type=float, default=5.0, help="vitesse moyenne de retrait, mm/s")
+    ap.add_argument("--mouvement", choices=["saccade", "lisse"], default="saccade", help="mouvement de la main : saccadé (défaut, cas sévère) ou lissé")
     ap.add_argument("--conduits", default="realiste,droit_conique,droit_cylindre,relief")
     ap.add_argument("--sortie", default=None)
     ap.add_argument("--test-externe", action="store_true", help="essai de recalage sur la partie visible du conduit")
@@ -517,8 +567,8 @@ def main():
     lignes = []
     def out(s=""):
         print(s); lignes.append(s)
-    out("Simulateur du scanner à anneau laser : %d graines, biais gyroscope %.2f °/s, inclinaison de la sonde %.1f°, bruit de mesure %.3f mm"
-        % (args.graines, args.biais_gyro, args.inclinaison, P["sigma_m"]))
+    out("Simulateur du scanner à anneau laser : %d graines, biais gyroscope %.2f °/s, inclinaison de la sonde %.1f°, bruit de mesure %.3f mm, mouvement %s, vitesse %.0f mm/s, latence du suivi %.0f ms (non compensée : %.0f ms)"
+        % (args.graines, args.biais_gyro, args.inclinaison, P["sigma_m"], args.mouvement, args.vitesse, args.latence_suivi, args.desynchro))
     out("Moyenne (écart-type) sur les graines. Axe final = erreur de position axiale à la fin du retrait (|mm|).")
     t0 = time.time()
     for nom in args.conduits.split(","):

@@ -45,7 +45,7 @@ Disposition retenue dans la spécification : caméra sur l'axe, anneau laser pro
 ### R4. Cadence et synchronisation
 - Le pas axial entre anneaux vaut vitesse / cadence : 0,33 mm à 10 mm/s et 30 mesures/s. La flèche d'interpolation sur un conduit lisse est négligeable (0,003 mm pour un rayon de courbure de 5 mm) : **la cadence n'est pas limitante** pour la justesse, contrairement à ce qu'on pourrait craindre avec P6 (10 mm/s) et P7 (pas de maillage 0,1 mm).
 - Le flou de bouger est faible : 10 µm pour 10 mm/s et 1 ms d'exposition.
-- Le point critique est la **datation** : une erreur de 1 ms à 50 mm/s de mouvement relatif donne 0,05 mm. Exigence proposée : horodatage matériel commun caméra, laser, gyroscope et suivi, avec un décalage résiduel ≤ 0,5 ms.
+- Le point critique est la **datation** : une erreur de 1 ms à 50 mm/s de mouvement relatif donne 0,05 mm. Exigence proposée : horodatage matériel commun caméra, laser, gyroscope et suivi, avec un décalage résiduel ≤ 0,5 ms. **Le simulateur (section 6) relativise ce chiffre** : pour la forme et des vitesses de main de 5 à 10 mm/s, plusieurs millisecondes de désynchronisation sont tolérées si la latence est connue.
 
 ## 2. Architecture de pose proposée (à valider)
 
@@ -146,6 +146,31 @@ Lecture :
 4. **Aucune configuration ne passe sous 0,10 mm quand le suivi est dégradé ou masqué** : le budget nominal de 0,10 mm RMS n'est tenu que sous les hypothèses nominales d'étalonnage du suivi externe. La qualité de ce suivi (erreur main-pointe, bruit, taux d'occultation) est donc le facteur dominant.
 5. **Limites** : gain de fusion choisi parmi trois valeurs (0,1 ; 0,2 ; 0,3) sur 3 graines ; modèle de suivi simple (bruit, biais constant, dérive lente ; pas de latence, de désynchronisation, de valeurs aberrantes ni de mouvement de la tête au-delà de la dérive) ; occultations en rafales régulières.
 
+### Latence et désynchronisation du suivi externe (v0.4 du simulateur)
+Modèle : le suivi externe livre à l'image k la pose de l'instant k·dt moins une latence de 30 ms. L'algorithme compense la latence qu'il connaît ; la **désynchronisation** est la part non compensée (latence mal connue). Conduit avec coudes, 4 graines ; résultats complets : `tools/simulation/resultats_latence_suivi.txt`. Le mouvement de la main est ici **lissé** (option `--mouvement lisse`) ; les résultats précédents de cette section utilisent le mouvement **saccadé** par défaut, plus sévère (rotation et décalage latéral aléatoires à chaque image). Avec le mouvement lissé et sans latence, les conclusions précédentes ne changent pas (suivi externe 0,071 mm, fusion 0,066 à 0,068 mm, suivi du centre 0,27 à 0,28 mm, recalage de surface 0,73 mm avec coudes ; `resultats_simulateur_mouvement_lisse.txt`).
+
+RMS du nuage (mm), mouvement lissé :
+
+| Vitesse | Désynchronisation | Suivi externe T | Fusion F |
+|---|---|---|---|
+| 5 mm/s | 0 ms | 0,067 | 0,073 |
+| 5 mm/s | 10 ms | 0,065 | 0,075 |
+| 5 mm/s | 30 ms | 0,082 | 0,081 |
+| 10 mm/s | 0 ms | 0,069 | 0,079 |
+| 10 mm/s | 10 ms | 0,068 | 0,077 |
+| 10 mm/s | 30 ms | 0,086 | 0,078 |
+
+Mouvement saccadé (cas sévère), 5 mm/s : T de 0,069 (0 ms) à 0,071 (5 ms), 0,078 (10 ms) et **0,130 mm (30 ms)** ; F de 0,089 à 0,091, 0,093 et **0,102 mm**.
+
+Erreur de pose de la fusion (axe final, orientation finale) : à 5 mm/s, 0,04 mm et 0,07° sans désynchronisation, 0,07 mm et 0,19° à 10 ms, 0,14 mm et 0,53° à 30 ms ; à 10 mm/s, 0,05 / 0,11 / 0,35 mm. L'erreur axiale vaut à peu près la vitesse multipliée par la désynchronisation. (Je ne reporte pas l'erreur finale du suivi externe seul : elle est faussée par l'effet de bord de l'interpolation différée en fin de série.)
+
+Lecture :
+1. **Avec une main qui bouge doucement, jusqu'à 10 ms de désynchronisation ne change presque rien à la forme** (écart inférieur à 0,003 mm), car un décalage le long de l'axe est presque invisible sur un conduit lisse. À 30 ms, le suivi externe seul perd environ 0,015 mm.
+2. **La désynchronisation se voit dans la pose** (position axiale, orientation) : elle compte si l'on exploite la position le long du conduit (profondeur, longueur, position des coudes).
+3. **Quand la main bouge de façon saccadée, la fusion encaisse mieux la latence** : à 30 ms de désynchronisation, 0,102 mm contre 0,130 mm pour le suivi seul.
+4. **Conséquence sur l'exigence R4** (horodatage ≤ 0,5 ms, calculée pour un mouvement relatif de 100 mm/s) : pour la forme, des vitesses de main de 5 à 10 mm/s tolèrent plusieurs millisecondes, **à condition de connaître la latence** (à mesurer à ±5 ms environ) et d'horodater les images. L'exigence de 0,5 ms n'est utile que pour des mouvements rapides ou pour la précision de position axiale. À reconsidérer, elle n'est plus un critère dimensionnant dans mes hypothèses.
+5. **Limites** : latence constante (pas de variation ni de pertes d'images), mouvement lissé choisi par moi (filtre passe-bas de l'ordre de 2 Hz), gain de fusion non réajusté, pas de mouvement de la tête ni de valeurs aberrantes.
+
 ### Ce que ces résultats indiquent
 1. **Le contrôle du simulateur est correct** : avec les poses vraies, l'erreur vaut le bruit de mesure (0,019 mm).
 2. **Le recalage de surface seul ne donne pas la longueur** : l'axe dérive de 4 à 5 mm sur 24 mm (environ 18 %), conduit conique ou non. Confirme R1 pour l'axe.
@@ -163,7 +188,7 @@ Lecture :
 - **La spécification (§4.2 « IMU + ICP ») est insuffisante** : à retenir pour la mise à jour de la spécification.
 - **Le banc de la phase 1 ne peut pas se limiter à un codeur linéaire** si les fantômes ont des coudes : il faut une référence de pose en 6 degrés de liberté (bras motorisé, table à plusieurs axes ou suivi externe de référence).
 - **Le suivi externe de la poignée (option T3 du plan) reste la base de référence** pour la phase 1, **complété par le gyroscope et le suivi du centre de la lumière** (fusion F) pour tenir les occultations et un suivi imparfait. Le suivi du centre de la lumière avec gyroscope est la meilleure option sans suivi externe (0,25 mm avec coudes) mais ne tient pas encore le budget ; sa dérive restante est à comparer sur banc.
-- Prochaines étapes pour le simulateur : latence et désynchronisation du suivi, valeurs aberrantes, mouvement de la tête, coudes réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
+- Prochaines étapes pour le simulateur : latence variable et pertes d'images, valeurs aberrantes, mouvement de la tête, coudes réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
 
 ## 7. Photogrammétrie, échelle et recalage sur la partie visible
 
