@@ -381,6 +381,13 @@ def run_config(tr, cfg, rng, P):
         cen = np.stack([loc[:, :, 0].mean(1), loc[:, :, 1].mean(1), np.full(nf, Bz)], 1)
         kf = np.zeros(2); kap = np.zeros((nf, 2))
         gp, gr = P["fus_pos"], P["fus_rot"]
+        # Filtre de Kalman (fusion adaptative) : état par axe = [erreur de l'estime, erreur lente du suivi (glissement du clip,
+        # dérive, biais main-pointe)]. L'amplitude de l'erreur du suivi est adaptée en ligne d'après la cohérence des innovations.
+        kal = P.get("fus_mode") == "kalman"
+        if kal:
+            a_s = np.exp(-tr["dt"]/P["kal_tau"])
+            Pk = np.zeros((3, 2, 2)); Pk[:, 1, 1] = P["kal_sig_s"]**2
+            ms = np.zeros(3); lam = 1.0; nis_ema = 1.0
         for k in range(nf):
             if k < P["k0"]:
                 pe[k], Re[k] = Ot[k], Rt[k]
@@ -406,11 +413,33 @@ def run_config(tr, cfg, rng, P):
             full = Re[k-1] @ cen[k-1] - Re[k] @ cen[k] + dz*dirw
             lat = Re[k].T @ (full - Re[k][:, 2]*dz)
             pp = pe[k-1] + Re[k][:, 2]*dz + Re[k] @ np.array([lat[0], lat[1], 0.0])
+            if kal:       # prédiction du filtre
+                Fm = np.diag([1.0, a_s])
+                Qm = np.diag([P["kal_q"]**2, lam*P["kal_sig_s"]**2*(1-a_s**2)])
+                for ax_ in range(3):
+                    Pk[ax_] = Fm @ Pk[ax_] @ Fm.T + Qm
+                ms = ms*a_s
             if ok[k]:
                 Ph = np.concatenate([pe[:k], pp[None]]); Rh = np.concatenate([Re[:k], Re[k][None]])
                 p_at, _ = interp_pose(Ph, Rh, k-d_im)
                 innov = pm[k]-p_at
-                pe[k] = pp + gp*innov if np.linalg.norm(innov) < P["gate_mm"] else pp
+                if np.linalg.norm(innov) >= P["gate_mm"]:
+                    pe[k] = pp
+                elif not kal:
+                    pe[k] = pp + gp*innov
+                else:
+                    Hm = np.array([-1.0, 1.0]); corr = np.zeros(3); nis_k = 0.0
+                    for ax_ in range(3):
+                        S_ = Hm @ Pk[ax_] @ Hm + P["trk_pos"]**2
+                        K_ = Pk[ax_] @ Hm / S_
+                        r_ = innov[ax_] - ms[ax_]
+                        corr[ax_] = K_[0]*r_            # correction de l'estime (x estimé)
+                        ms[ax_] = ms[ax_] + K_[1]*r_
+                        Pk[ax_] = (np.eye(2) - np.outer(K_, Hm)) @ Pk[ax_]
+                        nis_k += r_*r_/S_/3.0
+                    nis_ema = 0.97*nis_ema + 0.03*nis_k
+                    lam = float(np.clip(lam*np.exp(0.02*(nis_ema-1.0)), 0.02, 100.0))
+                    pe[k] = pp - corr
             else:
                 pe[k] = pp
     elif cfg in ("Ec", "Vc"):
@@ -603,7 +632,7 @@ def parametres(args):
                 sigma_m=0.02, gyro_bias=args.biais_gyro, gyro_arw=0.01,
                 enc_sigma=0.005, vo_sigma=0.01, vo_scale=0.003, icp_prior_ax=0.3, lat_prior=0.15,
                 trk_pos=args.bruit_suivi, trk_handeye=args.erreur_main_pointe, trk_drift=0.03, trk_rot=0.1,
-                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, bande_hz=getattr(args, 'bande_centrage', 0.0), course_mm=getattr(args, 'course_centrage', 1.0), bruit_centre=0.01, deform_eta=0.0, deform_rf=0.0, decentrage=args.decentrage, var_vitesse=args.variation_vitesse, gate_mm=0.5, gate_deg=1.5, aberrants=args.aberrants, aberrant_mm=1.0, aberrant_deg=3.0, glissement=args.glissement_clip, tete_mm=args.tete_mm, tete_deg=args.tete_deg, comp_tete=(args.compensation_tete == 'oui' and (args.tete_mm > 0 or args.tete_deg > 0)), lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
+                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, fus_mode='fixe', kal_q=0.01, kal_sig_s=0.1, kal_tau=2.0, bande_hz=getattr(args, 'bande_centrage', 0.0), course_mm=getattr(args, 'course_centrage', 1.0), bruit_centre=0.01, deform_eta=0.0, deform_rf=0.0, decentrage=args.decentrage, var_vitesse=args.variation_vitesse, gate_mm=0.5, gate_deg=1.5, aberrants=args.aberrants, aberrant_mm=1.0, aberrant_deg=3.0, glissement=args.glissement_clip, tete_mm=args.tete_mm, tete_deg=args.tete_deg, comp_tete=(args.compensation_tete == 'oui' and (args.tete_mm > 0 or args.tete_deg > 0)), lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
 
 def main():
     ap = argparse.ArgumentParser()

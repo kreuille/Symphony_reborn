@@ -366,7 +366,35 @@ Lecture :
 4. **Les occultations du suivi** ne dégradent pas l'hybride à faible gain (0,089 mm).
 5. **Limites** : le centrage (0,05 mm et 0,3°) est une hypothèse, la section 8.5 montre qu'un centrage au contact simple ne l'atteint pas ; gains choisis parmi quatre valeurs sur les mêmes graines ; clip, tête et coudes modélisés de façon simple ; pas de latence, d'aberrants ni de mâchoire dans cet essai.
 
-**Conclusion** : l'architecture « retrait motorisé centré + gyroscopes + suivi externe en fusion adaptative » est la plus prometteuse des architectures simulées (0,09 mm), mais elle suppose de résoudre le centrage mécanique. Le suivi externe en main libre (0,12 mm tête mobile, section 6) reste le repli.
+**Conclusion** : l'architecture « retrait motorisé centré + gyroscopes + suivi externe en fusion adaptative » est la plus prometteuse des architectures simulées (0,09 mm avec un gain fixe, 0,06 à 0,10 mm avec le filtre de Kalman de la section 8.9), mais elle suppose de résoudre le centrage mécanique. Le suivi externe en main libre (0,12 mm tête mobile, section 6) reste le repli.
+
+### 8.9 Fusion adaptative (filtre de Kalman)
+Remplace le gain fixe de la section 8.8 : par axe, deux états, l'erreur de l'estime (marche aléatoire) et l'erreur lente du suivi externe (glissement du clip, dérive, biais main-pointe ; processus à mémoire de 2 s). L'amplitude de l'erreur du suivi est adaptée en ligne d'après la cohérence des innovations. Mêmes paramètres dans tous les scénarios (dérive de l'estime 0,01 mm par image, amplitude initiale de l'erreur du suivi 0,1 mm, bruit du suivi 0,04 mm). Script : `tools/simulation/etude_fusion_adaptative.py` ; résultats : `tools/simulation/resultats_fusion_adaptative.txt`. Conduit avec coudes, mouvement lissé, 4 graines. RMS du nuage (mm) :
+
+| Scénario | Centre seul | Suivi externe seul | Fusion gain 0,3 | Fusion gain 0,01 | **Kalman adaptatif** |
+|---|---|---|---|---|---|
+| Motorisé, tête immobile | 0,092 | 0,074 | 0,062 | 0,073 | **0,057** |
+| Motorisé, tête mobile, clip glissant de 0,1 mm | 0,100 | 0,143 | 0,119 | 0,090 | **0,083** |
+| Motorisé, tête mobile, clip glissant de 0,3 mm | 0,100 | 0,304 | 0,265 | 0,100 | **0,101** |
+| Motorisé, tête mobile, clip 0,1 mm, deux occultations | 0,100 | 0,144 | 0,114 | 0,089 | **0,084** |
+| Motorisé, tête mobile, clip 0,1 mm, aberrants 3 % | 0,100 | 0,234 | 0,119 | 0,091 | **0,082** |
+| Main libre, tête mobile, clip glissant de 0,1 mm | 0,246 | 0,150 | **0,122** | 0,229 | 0,198 |
+| Main libre, tête mobile, clip glissant de 0,3 mm | 0,246 | 0,367 | **0,304** | 0,258 | 0,266 |
+
+Sensibilité à la dérive supposée de l'estime (kal_q, mm par image ; 0,01 ci-dessus) :
+
+| Scénario | 0,01 | 0,03 | 0,1 |
+|---|---|---|---|
+| Motorisé, tête mobile, clip glissant de 0,1 mm | **0,083** | 0,091 | 0,124 |
+| Main libre, tête mobile, clip glissant de 0,1 mm | 0,198 | **0,105** | 0,130 |
+| Main libre, tête mobile, clip glissant de 0,3 mm | **0,266** | 0,330 | 0,307 |
+
+Lecture :
+1. **Retrait motorisé centré : le filtre fait au moins aussi bien que le meilleur gain fixe dans les cinq scénarios, sans réglage par scénario** (0,057 à 0,101 mm), et il rejette les valeurs aberrantes et les occultations. C'est le comportement attendu d'une fusion adaptative : il suit le suivi externe quand celui-ci est bon (tête immobile : 0,057 mm, mieux que chaque source seule) et s'appuie sur le suivi du centre quand le clip glisse.
+2. **Il reste un paramètre à régler par architecture : la dérive de l'estime.** En main libre, le suivi du centre dérive davantage ; avec le réglage du retrait motorisé, le filtre est moins bon que le gain fixe (0,198 contre 0,122 mm), mais avec une dérive supposée de 0,03 mm par image il passe à 0,105 mm (mieux que 0,122). Ce paramètre peut se **mesurer sur banc** (dérive du suivi du centre sur fantômes) ou s'**adapter en ligne** (non fait).
+3. **Un clip qui glisse de 0,3 mm en main libre n'est rattrapé par aucune méthode** (0,27 à 0,37 mm) : sans centrage mécanique, un clip médiocre ne se compense pas.
+4. **Ordre de grandeur final** : retrait motorisé centré + suivi externe en fusion adaptative = **0,06 à 0,10 mm** dans les scénarios simulés, au prix de l'hypothèse de centrage (section 8.5).
+5. **Limites** : paramètres du filtre (mémoire de 2 s, amplitude initiale 0,1 mm, bruit) choisis par moi ; la dérive supposée de l'estime a été examinée sur les mêmes graines (réglage a posteriori pour la main libre) ; le modèle d'erreur du suivi est un processus à mémoire de 2 s ; latence, mâchoire et centrage réel absents.
 
 ## 9. Prochaines étapes de conception
 1. **Simulateur** : version 0.1 faite (sections 6 et 7.2) ; à améliorer (estimateur par fenêtre glissante, coudes réalistes, mâchoire, occultation, biais systématique du capteur externe).

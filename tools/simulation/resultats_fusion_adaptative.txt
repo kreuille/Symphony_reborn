@@ -1,0 +1,16 @@
+Conduit avec coudes, mouvement lissé, 4 graines. RMS du nuage (mm).
+
+Scénario                                                 | Centre seul | Suivi seul | Fusion g=0,3 | Fusion g=0,01 | Kalman adaptatif
+Motorisé, tête immobile                                  | 0.092       | 0.074      | 0.062        | 0.073         | 0.057
+Motorisé, tête mobile, clip glissant de 0,1 mm           | 0.100       | 0.143      | 0.119        | 0.090         | 0.083
+Motorisé, tête mobile, clip glissant de 0,3 mm           | 0.100       | 0.304      | 0.265        | 0.100         | 0.101
+Motorisé, tête mobile, clip 0,1 mm, deux occultations    | 0.100       | 0.144      | 0.114        | 0.089         | 0.084
+Motorisé, tête mobile, clip 0,1 mm, aberrants 3 %        | 0.100       | 0.234      | 0.119        | 0.091         | 0.082
+Main libre, tête mobile, clip glissant de 0,1 mm         | 0.246       | 0.150      | 0.122        | 0.229         | 0.198
+Main libre, tête mobile, clip glissant de 0,3 mm         | 0.246       | 0.367      | 0.304        | 0.258         | 0.266
+
+Sensibilité à la dérive supposée de l'estime (kal_q, mm par image), Kalman adaptatif :
+Scénario                                                 | kal_q = 0,01 | 0,03 | 0,1
+Motorisé, tête mobile, clip glissant de 0,1 mm           | 0.083 | 0.091 | 0.124
+Main libre, tête mobile, clip glissant de 0,1 mm         | 0.198 | 0.105 | 0.130
+Main libre, tête mobile, clip glissant de 0,3 mm         | 0.266 | 0.330 | 0.307
