@@ -1,0 +1,26 @@
+Simulateur du scanner à anneau laser : 3 graines, biais gyroscope 0.05 °/s, inclinaison de la sonde 2.0°, bruit de mesure 0.020 mm, mouvement lisse, vitesse 5 mm/s, latence du suivi 0 ms (non compensée : 0 ms)
+Moyenne (écart-type) sur les graines. Axe final = erreur de position axiale à la fin du retrait (|mm|).
+
+Conduit « realiste » (147 images environ par retrait)
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+poses vraies    0.019 (0.000)  0.038 (0.000)   0.000 (0.000)   0.000 (0.000)   0.000 (0.000)
+E codeur+ICP    0.730 (0.031)  1.593 (0.021)   0.483 (0.126)   1.094 (0.055)   0.467 (0.089)
+V odom.+ICP     0.732 (0.037)  1.596 (0.040)   0.586 (0.144)   1.097 (0.064)   0.467 (0.089)
+E codeur+centre   0.282 (0.109)  0.528 (0.183)   0.116 (0.099)   0.410 (0.171)   0.467 (0.089)
+V odom.+centre   0.283 (0.108)  0.528 (0.184)   0.132 (0.075)   0.413 (0.171)   0.467 (0.089)
+T suivi ext.    0.071 (0.023)  0.133 (0.038)   0.044 (0.006)   0.097 (0.034)   0.184 (0.021)
+F fusion        0.066 (0.017)  0.129 (0.030)   0.044 (0.026)   0.091 (0.024)   0.060 (0.005)
+I ICP seul      0.691 (0.100)  1.402 (0.236)   3.387 (0.399)   1.017 (0.165)   0.467 (0.089)
+
+Conduit « droit_conique » (147 images environ par retrait)
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+poses vraies    0.019 (0.000)  0.038 (0.000)   0.000 (0.000)   0.000 (0.000)   0.000 (0.000)
+E codeur+ICP    0.219 (0.066)  0.428 (0.123)   0.092 (0.029)   0.323 (0.094)   0.472 (0.091)
+V odom.+ICP     0.219 (0.066)  0.428 (0.123)   0.194 (0.063)   0.322 (0.094)   0.472 (0.091)
+E codeur+centre   0.267 (0.089)  0.486 (0.156)   0.044 (0.023)   0.388 (0.148)   0.472 (0.091)
+V odom.+centre   0.267 (0.089)  0.485 (0.157)   0.146 (0.054)   0.388 (0.147)   0.472 (0.091)
+T suivi ext.    0.071 (0.026)  0.133 (0.041)   0.044 (0.006)   0.097 (0.039)   0.184 (0.021)
+F fusion        0.068 (0.022)  0.128 (0.037)   0.044 (0.026)   0.092 (0.031)   0.061 (0.004)
+I ICP seul      0.260 (0.064)  0.506 (0.131)   3.541 (0.787)   0.345 (0.080)   0.472 (0.091)
+
+Temps de calcul : 20 s

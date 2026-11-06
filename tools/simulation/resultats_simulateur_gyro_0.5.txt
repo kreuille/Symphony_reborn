@@ -1,0 +1,15 @@
+Simulateur du scanner à anneau laser : 4 graines, biais gyroscope 0.50 °/s, inclinaison de la sonde 2.0°, bruit de mesure 0.020 mm
+Moyenne (écart-type) sur les graines. Axe final = erreur de position axiale à la fin du retrait (|mm|).
+
+Conduit « realiste » (153 images environ par retrait)
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+poses vraies    0.019 (0.000)  0.038 (0.000)   0.000 (0.000)   0.000 (0.000)   0.000 (0.000)
+E codeur+ICP    0.738 (0.089)  1.513 (0.180)   0.452 (0.085)   1.138 (0.211)   3.589 (1.776)
+V odom.+ICP     0.737 (0.090)  1.511 (0.180)   0.517 (0.128)   1.139 (0.211)   3.589 (1.776)
+E codeur+centre   0.300 (0.114)  0.617 (0.244)   0.061 (0.032)   0.514 (0.221)   3.589 (1.776)
+V odom.+centre   0.302 (0.112)  0.616 (0.238)   0.091 (0.054)   0.517 (0.216)   3.589 (1.776)
+T suivi ext.    0.069 (0.020)  0.130 (0.033)   0.037 (0.013)   0.094 (0.030)   0.156 (0.052)
+F fusion        0.077 (0.018)  0.153 (0.030)   0.037 (0.026)   0.103 (0.020)   0.566 (0.147)
+I ICP seul      0.686 (0.181)  1.369 (0.366)   4.391 (1.429)   1.028 (0.339)   3.589 (1.776)
+
+Temps de calcul : 14 s

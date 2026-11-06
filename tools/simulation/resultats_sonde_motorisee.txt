@@ -1,0 +1,44 @@
+Conduit avec coudes, mouvement lissé, 4 graines, tête mobile 1,5 mm / 1,5° (gyroscope sur la tête). Lignes : suivi du centre (axe par codeur ou odométrie visuelle) et fusion.
+
+## MAIN LIBRE (inclinaison 2°, décentrage 0,3 mm, vitesse variable 5 mm/s), tête mobile 1,5 mm / 1,5° compensée
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+E codeur+centre   0.246 (0.105)  0.465 (0.179)   0.138 (0.083)   0.351 (0.166)   0.614 (0.209)
+V odom.+centre   0.242 (0.104)  0.457 (0.176)   0.194 (0.106)   0.345 (0.165)   0.614 (0.209)
+F fusion        0.122 (0.043)  0.237 (0.076)   0.104 (0.059)   0.169 (0.057)   0.272 (0.050)
+
+## SONDE MOTORISÉE AUTO-CENTRÉE (inclinaison 0,3°, décentrage 0,05 mm, vitesse constante 3 mm/s), tête mobile 1,5 mm / 1,5° compensée
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+E codeur+centre   0.100 (0.032)  0.191 (0.057)   0.063 (0.020)   0.145 (0.055)   0.719 (0.525)
+V odom.+centre   0.101 (0.032)  0.192 (0.057)   0.078 (0.029)   0.147 (0.058)   0.719 (0.525)
+F fusion        0.119 (0.034)  0.228 (0.056)   0.115 (0.043)   0.160 (0.044)   0.227 (0.059)
+
+## MÊME SONDE, gyroscope 10 fois meilleur (biais 0,005 °/s)
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+E codeur+centre   0.094 (0.025)  0.177 (0.046)   0.044 (0.020)   0.130 (0.038)   0.098 (0.045)
+V odom.+centre   0.095 (0.026)  0.178 (0.045)   0.087 (0.029)   0.132 (0.040)   0.098 (0.045)
+F fusion        0.119 (0.033)  0.228 (0.055)   0.115 (0.043)   0.160 (0.044)   0.197 (0.048)
+
+## ABLATION : décentrage 0,05 mm seul
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+E codeur+centre   0.164 (0.071)  0.315 (0.128)   0.114 (0.063)   0.237 (0.103)   0.614 (0.209)
+V odom.+centre   0.162 (0.071)  0.310 (0.128)   0.160 (0.112)   0.236 (0.102)   0.614 (0.209)
+F fusion        0.119 (0.041)  0.227 (0.067)   0.105 (0.060)   0.165 (0.053)   0.272 (0.050)
+
+## ABLATION : inclinaison 0,3° seule
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+E codeur+centre   0.214 (0.077)  0.428 (0.147)   0.135 (0.063)   0.308 (0.109)   0.613 (0.211)
+V odom.+centre   0.212 (0.073)  0.420 (0.140)   0.177 (0.132)   0.304 (0.103)   0.613 (0.211)
+F fusion        0.122 (0.042)  0.238 (0.077)   0.105 (0.060)   0.169 (0.057)   0.272 (0.050)
+
+## ABLATION : vitesse constante 3 mm/s seule
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+E codeur+centre   0.269 (0.077)  0.543 (0.147)   0.147 (0.068)   0.401 (0.125)   0.717 (0.523)
+V odom.+centre   0.272 (0.081)  0.548 (0.153)   0.138 (0.061)   0.404 (0.133)   0.717 (0.523)
+F fusion        0.122 (0.033)  0.239 (0.056)   0.112 (0.044)   0.167 (0.042)   0.226 (0.059)
+
+## ABLATION : décentrage 0,05 mm + inclinaison 0,3°, vitesse libre 5 mm/s
+Config  RMS surface (mm)   95e c. (mm)  Axe final (mm)     Latéral RMS Orient. fin (°)
+E codeur+centre   0.104 (0.016)  0.205 (0.030)   0.110 (0.040)   0.153 (0.021)   0.613 (0.211)
+V odom.+centre   0.104 (0.011)  0.206 (0.016)   0.151 (0.134)   0.153 (0.012)   0.613 (0.211)
+F fusion        0.119 (0.041)  0.229 (0.069)   0.105 (0.060)   0.166 (0.053)   0.272 (0.050)
+

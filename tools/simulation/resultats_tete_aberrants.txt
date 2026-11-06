@@ -1,0 +1,10 @@
+Conduit avec coudes, mouvement lissé, 5 mm/s, 4 graines, latence nulle. RMS du nuage (mm) ; entre parenthèses l'erreur latérale RMS.
+
+Scénario                                       | Centre seul (V)  | Suivi externe T  | T + médiane      | Fusion F        
+Référence (tête immobile)                      | 0.254 (0.364)    | 0.067 (0.090)    | 0.061 (0.080)    | 0.062 (0.083)   
+Tête 1,5 mm / 1,5°, sans compensation          | 0.234 (0.333)    | 1.370 (1.979)    | 1.369 (1.975)    | 0.274 (0.407)   
+Tête 1,5 mm / 1,5°, compensée (clip 0,1 mm)    | 0.242 (0.345)    | 0.150 (0.205)    | 0.138 (0.188)    | 0.122 (0.169)   
+Tête 1,5 mm / 1,5°, compensée (clip 0,3 mm)    | 0.242 (0.345)    | 0.367 (0.510)    | 0.359 (0.499)    | 0.304 (0.439)   
+Tête 3 mm / 3°, compensée (clip 0,1 mm)        | 0.242 (0.345)    | 0.149 (0.204)    | 0.137 (0.188)    | 0.121 (0.169)   
+Aberrants 3 % (tête immobile)                  | 0.254 (0.364)    | 0.183 (0.268)    | 0.062 (0.083)    | 0.061 (0.082)   
+Tête 1,5 mm / 1,5° compensée + aberrants 3 %   | 0.242 (0.345)    | 0.252 (0.350)    | 0.148 (0.202)    | 0.128 (0.178)   

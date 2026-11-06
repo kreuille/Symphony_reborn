@@ -1,0 +1,30 @@
+Latence vraie du suivi externe : 30 ms. Désynchronisation = part de la latence que l'algorithme ne compense pas.
+Mouvement lissé, conduit avec coudes, 4 graines. RMS du nuage (mm) et erreur latérale RMS (mm).
+
+Vitesse    Désynchro (ms) | Suivi externe T | Fusion F       | Centre seul   
+5 mm/s     0              |  0.067   0.090 |  0.073   0.101 |  0.254   0.364
+5 mm/s     2              |  0.066   0.088 |  0.073   0.102 |  0.254   0.364
+5 mm/s     5              |  0.065   0.087 |  0.074   0.102 |  0.254   0.364
+5 mm/s     10             |  0.065   0.086 |  0.075   0.104 |  0.254   0.364
+5 mm/s     30             |  0.082   0.105 |  0.081   0.111 |  0.254   0.364
+10 mm/s    0              |  0.069   0.092 |  0.079   0.109 |  0.257   0.371
+10 mm/s    2              |  0.068   0.090 |  0.079   0.109 |  0.257   0.371
+10 mm/s    5              |  0.067   0.088 |  0.078   0.109 |  0.257   0.371
+10 mm/s    10             |  0.068   0.088 |  0.077   0.108 |  0.257   0.371
+10 mm/s    30             |  0.086   0.106 |  0.078   0.109 |  0.257   0.371
+
+Erreur axiale finale (mm) et erreur d'orientation finale (°), mêmes conditions (latence vraie 30 ms) :
+Vitesse    Désynchro (ms) | Suivi externe T      | Fusion F            
+5 mm/s     0              | axe 0.148  orient  1.14 | axe 0.039  orient  0.07
+5 mm/s     10             | axe 0.148  orient  1.14 | axe 0.069  orient  0.19
+5 mm/s     30             | axe 0.148  orient  1.14 | axe 0.142  orient  0.53
+10 mm/s    0              | axe 0.358  orient  0.69 | axe 0.045  orient  0.07
+10 mm/s    10             | axe 0.358  orient  0.69 | axe 0.105  orient  0.17
+10 mm/s    30             | axe 0.358  orient  0.69 | axe 0.347  orient  0.51
+
+Mouvement saccadé (cas sévère), conduit avec coudes, 5 mm/s, 4 graines, latence vraie 30 ms : RMS du nuage (mm)
+Désynchro (ms)   | Suivi T    | Fusion F  
+0                | 0.069      | 0.089     
+5                | 0.071      | 0.091     
+10               | 0.078      | 0.093     
+30               | 0.130      | 0.102     
