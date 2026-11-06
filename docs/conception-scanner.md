@@ -319,6 +319,27 @@ Lecture :
 4. **Conséquence** : un centrage au contact simple n'atteint pas le budget ; il faut soit un contact très souple avec une autre source de centrage, soit un centrage sans contact (par exemple correction active du décentrage à partir du centre d'anneau mesuré, ou guide semi-rigide dans la partie externe du conduit), soit le suivi externe de la section 6. Ces trois pistes ne sont pas simulées.
 5. **Limites** : déformation uniquement radiale, élastique et locale ; en réalité le tissu est visco-élastique et la déformation se propage le long de l'axe ; valeurs de perturbation de la main et de raideur de collerette choisies par moi ; coudes inventés.
 
+### 8.6 Centrage actif sans contact (simulation)
+Pour éviter la déformation du conduit, l'idée est de ne pas toucher la paroi : un actionneur latéral en bout de sonde annule à chaque image le décentrage mesuré (le centre de l'anneau laser dans le repère de la sonde, déjà disponible). Modèle : perturbation de la main de 0,3 mm (écart-type, corrélée sur 0,5 s), boucle à intégrateur de bande passante réglable, bruit de mesure de 0,01 mm, course de ±1 mm. Retrait à 3 mm/s constant, tête mobile compensée par gyroscope, suivi du centre avec axe par codeur, 4 graines. Script : `tools/simulation/etude_centrage_actif.py` ; résultats : `tools/simulation/resultats_centrage_actif.txt`. RMS du nuage (mm) ; entre parenthèses, décentrage résiduel RMS par axe (mm) :
+
+| Bande passante de la boucle | Inclinaison de la sonde 2° | 0,5° | 0,3° |
+|---|---|---|---|
+| Sans centrage actif (décentrage 0,29) | 0,269 | 0,184 | 0,178 |
+| 0,5 Hz (0,165) | 0,254 | 0,149 | 0,139 |
+| 1 Hz (0,119) | 0,245 | 0,132 | 0,121 |
+| 2 Hz (0,081) | 0,241 | 0,122 | 0,110 |
+| 4 Hz (0,055) | 0,241 | 0,119 | **0,106** |
+
+Lecture :
+1. **Le centrage actif ramène le décentrage de 0,29 à 0,06-0,08 mm** avec une bande passante de 2 à 4 Hz, sans déformer le conduit.
+2. **Il ne suffit pas seul : l'inclinaison de la sonde compte autant.** Avec 2° d'inclinaison non corrigée, l'erreur reste à 0,24 mm. Il faut aussi **aligner la sonde sur le conduit à 0,5° environ** (0,12 mm) ou 0,3° (0,106 mm). Un actionneur à deux niveaux (position et inclinaison) ou une pointe orientable serait nécessaire ; non simulé.
+3. **Au-delà de 2 Hz, le gain est faible** : l'erreur restante vient de l'inclinaison, du gyroscope et du bruit.
+4. **Meilleur cas sans suivi externe ni contact : 0,106 mm**, au voisinage du nominal de 0,10 mm, sous l'hypothèse d'une inclinaison de 0,3°.
+5. **Faisabilité non établie** : un actionneur de 0,3 à 1 mm de course et 2 Hz de bande passante dans une pointe de 4,5 mm, avec capteur, laser, caméra et sécurité du patient, est un défi d'ingénierie. Le jeu radial dans la partie étroite (rayon 3,0 mm moins rayon de pointe 2,25 mm, soit environ 0,75 mm) limite la course utile avant contact. La commande est supposée sans retard, ce qui est optimiste.
+6. **Limites** : régulateur simple, un seul niveau de décentrage latéral, pas de contact avec la paroi simulé ; inclinaison fixée en entrée ; coudes inventés.
+
+**Synthèse de la section 8** : sans suivi externe, le meilleur cas simulé est 0,106 mm (centrage actif plus alignement à 0,3°), contre 0,14 mm pour le meilleur centrage au contact, 0,25 mm en main libre et 0,075 à 0,12 mm avec suivi externe (sans et avec mouvement de la tête compensé par clip). Le suivi externe reste la voie la moins risquée pour la phase 1 ; le retrait motorisé avec centrage actif est une piste à explorer en parallèle sur banc.
+
 ## 9. Prochaines étapes de conception
 1. **Simulateur** : version 0.1 faite (sections 6 et 7.2) ; à améliorer (estimateur par fenêtre glissante, coudes réalistes, mâchoire, occultation, biais systématique du capteur externe).
 1bis. **Expériences bas coût** : otoscope USB et COLMAP sur fantôme (7.3) ; mesure de la précision d'un capteur 3D externe candidat sur fantôme d'oreille.

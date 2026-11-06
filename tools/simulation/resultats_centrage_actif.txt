@@ -1,0 +1,19 @@
+Conduit avec coudes, mouvement lissé, retrait à 3 mm/s constant, tête mobile 1,5 mm / 1,5° (gyroscope sur la tête), 4 graines.
+Perturbation de la main : décalage latéral de 0,3 mm (écart-type). Suivi du centre, axe par codeur. RMS du nuage (mm), décentrage résiduel RMS (mm par axe).
+
+Bande passante de la boucle Inclinaison  | RMS      Décentrage  
+sans centrage actif        2.0°         | 0.269    0.291       
+0.5 Hz                     2.0°         | 0.254    0.165       
+1.0 Hz                     2.0°         | 0.245    0.119       
+2.0 Hz                     2.0°         | 0.241    0.081       
+4.0 Hz                     2.0°         | 0.241    0.055       
+sans centrage actif        0.5°         | 0.184    0.291       
+0.5 Hz                     0.5°         | 0.149    0.165       
+1.0 Hz                     0.5°         | 0.132    0.119       
+2.0 Hz                     0.5°         | 0.122    0.081       
+4.0 Hz                     0.5°         | 0.119    0.055       
+sans centrage actif        0.3°         | 0.178    0.291       
+0.5 Hz                     0.3°         | 0.139    0.165       
+1.0 Hz                     0.3°         | 0.121    0.119       
+2.0 Hz                     0.3°         | 0.110    0.081       
+4.0 Hz                     0.3°         | 0.106    0.055       

@@ -190,6 +190,15 @@ def gen_truth(canal, rng, P):
     if P["lisse"]:      # mouvement de la main sans composante saccadée à la cadence d'image
         lat, tilt, roll = lisser(lat), lisser(tilt), lisser(roll)[:, 0]
         lat = np.clip(lat, -0.8, 0.8)
+    if P["bande_hz"] > 0:
+        # Centrage actif sans contact : un actionneur latéral en bout de sonde annule le décentrage mesuré
+        # (centre de l'anneau), avec une bande passante limitée, un bruit de mesure et une course limitée.
+        g = 1.0-np.exp(-2*np.pi*P["bande_hz"]*dt)
+        d = lat.copy(); act = np.zeros(2); lat = np.zeros_like(d)
+        for k in range(nf):
+            lat[k] = d[k] + act
+            mesure = lat[k] + P["bruit_centre"]*rng.standard_normal(2)
+            act = np.clip(act - g*mesure, -P["course_mm"], P["course_mm"])
     O = np.zeros((nf, 3)); R = np.zeros((nf, 3, 3)); Tt = np.zeros((nf, 3))
     for k in range(nf):
         c, T, N, B = canal.interp_frame(sp[k])
@@ -226,7 +235,7 @@ def gen_truth(canal, rng, P):
         HR = np.array([exp_so3(w) for w in hr])
     Rw = np.einsum('kij,kjl->kil', HR, R)
     Pw = np.einsum('kij,kj->ki', HR, O) + Ht
-    return dict(sp=sp, O=O, R=R, T=Tt, rho=rho_meas, alpha=al, nf=nf, nr=nr, dt=dt, HR=HR, Ht=Ht, Rw=Rw, Pw=Pw)
+    return dict(sp=sp, O=O, R=R, T=Tt, rho=rho_meas, alpha=al, nf=nf, nr=nr, dt=dt, HR=HR, Ht=Ht, Rw=Rw, Pw=Pw, lat=lat)
 
 # ----------------------------------------------------------------------------
 # Capteurs et estimation
@@ -594,7 +603,7 @@ def parametres(args):
                 sigma_m=0.02, gyro_bias=args.biais_gyro, gyro_arw=0.01,
                 enc_sigma=0.005, vo_sigma=0.01, vo_scale=0.003, icp_prior_ax=0.3, lat_prior=0.15,
                 trk_pos=args.bruit_suivi, trk_handeye=args.erreur_main_pointe, trk_drift=0.03, trk_rot=0.1,
-                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, deform_eta=0.0, deform_rf=0.0, decentrage=args.decentrage, var_vitesse=args.variation_vitesse, gate_mm=0.5, gate_deg=1.5, aberrants=args.aberrants, aberrant_mm=1.0, aberrant_deg=3.0, glissement=args.glissement_clip, tete_mm=args.tete_mm, tete_deg=args.tete_deg, comp_tete=(args.compensation_tete == 'oui' and (args.tete_mm > 0 or args.tete_deg > 0)), lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
+                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, bande_hz=getattr(args, 'bande_centrage', 0.0), course_mm=getattr(args, 'course_centrage', 1.0), bruit_centre=0.01, deform_eta=0.0, deform_rf=0.0, decentrage=args.decentrage, var_vitesse=args.variation_vitesse, gate_mm=0.5, gate_deg=1.5, aberrants=args.aberrants, aberrant_mm=1.0, aberrant_deg=3.0, glissement=args.glissement_clip, tete_mm=args.tete_mm, tete_deg=args.tete_deg, comp_tete=(args.compensation_tete == 'oui' and (args.tete_mm > 0 or args.tete_deg > 0)), lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
 
 def main():
     ap = argparse.ArgumentParser()
@@ -615,6 +624,8 @@ def main():
     ap.add_argument("--aberrants", type=float, default=0.0, help="probabilité par image d'une mesure aberrante du suivi externe")
     ap.add_argument("--decentrage", type=float, default=0.3, help="décalage latéral aléatoire de la sonde dans le conduit (écart-type, mm)")
     ap.add_argument("--variation-vitesse", type=float, default=0.3, help="variation relative aléatoire de la vitesse de retrait")
+    ap.add_argument("--bande-centrage", type=float, default=0.0, help="centrage actif sans contact : bande passante de la boucle, Hz (0 = sans)")
+    ap.add_argument("--course-centrage", type=float, default=1.0, help="course latérale de l'actionneur, mm")
     ap.add_argument("--conduits", default="realiste,droit_conique,droit_cylindre,relief")
     ap.add_argument("--sortie", default=None)
     ap.add_argument("--test-externe", action="store_true", help="essai de recalage sur la partie visible du conduit")
