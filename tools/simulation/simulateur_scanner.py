@@ -209,7 +209,18 @@ def gen_truth(canal, rng, P):
         hi = np.where(inside, hi, mid)
     rho_true = 0.5*(lo+hi)
     rho_meas = rho_true + P["sigma_m"]*rng.standard_normal((nf, nr))
-    return dict(sp=sp, O=O, R=R, T=Tt, rho=rho_meas, alpha=al, nf=nf, nr=nr, dt=dt)
+    # mouvement de la tête dans le repère du suivi externe (l'oreille est solidaire de la tête)
+    HR = np.tile(np.eye(3), (nf, 1, 1)); Ht = np.zeros((nf, 3))
+    if P["tete_mm"] > 0 or P["tete_deg"] > 0:
+        rho_t = 1-dt/1.0
+        ht = lisser(np.stack([ar1(rng, nf, rho_t, P["tete_mm"]) for _ in range(3)], 1), 0.15)
+        hr = lisser(np.stack([ar1(rng, nf, rho_t, P["tete_deg"]*DEG) for _ in range(3)], 1), 0.15)
+        ht -= ht[0]; hr -= hr[0]
+        Ht = ht
+        HR = np.array([exp_so3(w) for w in hr])
+    Rw = np.einsum('kij,kjl->kil', HR, R)
+    Pw = np.einsum('kij,kj->ki', HR, O) + Ht
+    return dict(sp=sp, O=O, R=R, T=Tt, rho=rho_meas, alpha=al, nf=nf, nr=nr, dt=dt, HR=HR, Ht=Ht, Rw=Rw, Pw=Pw)
 
 # ----------------------------------------------------------------------------
 # Capteurs et estimation
@@ -218,24 +229,30 @@ def local_ring(tr, Bz):
     r, a = tr["rho"], tr["alpha"][None, :]
     return np.stack([r*np.cos(a), r*np.sin(a), np.full_like(r, Bz)], 2)   # (F, Rn, 3)
 
-def gyro_increments(tr, rng, P):
-    """Rotations mesurées par le gyroscope entre images successives (biais constant + bruit)."""
-    nf, dt = tr["nf"], tr["dt"]
-    Rt = tr["R"]
+def gyro_increments(Rseq, dt, rng, P):
+    """Rotations mesurées par un gyroscope entre images successives (biais constant + bruit)."""
     bias = P["gyro_bias"]*DEG*rng.standard_normal(3)
     arw = P["gyro_arw"]*DEG
     incs = [np.eye(3)]
-    for k in range(1, nf):
-        dth = log_so3(Rt[k-1].T @ Rt[k])
+    for k in range(1, len(Rseq)):
+        dth = log_so3(Rseq[k-1].T @ Rseq[k])
         incs.append(exp_so3(dth + bias*dt + arw*np.sqrt(dt)*rng.standard_normal(3)))
     return incs
 
+def integrer(R0, incs):
+    out = np.zeros((len(incs), 3, 3)); out[0] = R0
+    for k in range(1, len(incs)):
+        out[k] = out[k-1] @ incs[k]
+    return out
+
 def gyro_orientation(tr, rng, P):
-    incs = gyro_increments(tr, rng, P)
-    Re = np.zeros_like(tr["R"]); Re[0] = tr["R"][0]
-    for k in range(1, tr["nf"]):
-        Re[k] = Re[k-1] @ incs[k]
-    return Re
+    """Orientation de la sonde dans le repère de l'oreille. Le gyroscope de la sonde mesure dans le repère
+    du monde (il voit aussi la rotation de la tête) ; un gyroscope sur la tête permet de la retirer."""
+    Rw_est = integrer(tr["Rw"][0], gyro_increments(tr["Rw"], tr["dt"], rng, P))
+    if P["comp_tete"]:
+        Rh_est = integrer(tr["HR"][0], gyro_increments(tr["HR"], tr["dt"], rng, P))
+        return np.einsum('kji,kjl->kil', Rh_est, Rw_est)
+    return Rw_est
 
 def masque_occultation(nf, rng, P):
     """Vrai si le suivi externe voit la poignée. Rafales d'occultation de P['occl_len'] images."""
@@ -264,19 +281,44 @@ def latence_compensee(P):
     return max(0.0, P["trk_lat"]-P["trk_desync"])
 
 def mesures_suivi(tr, rng, P):
-    """Pose absolue mesurée par le suivi externe : bruit, erreur d'étalonnage main-pointe, dérive,
-    et latence (la pose mesurée à l'image k est celle de l'instant k*dt - latence)."""
-    nf = tr["nf"]
-    Ot, Rt = tr["O"], tr["R"]
+    """Pose absolue mesurée par le suivi externe (repère du suivi) : bruit, erreur d'étalonnage main-pointe,
+    dérive, valeurs aberrantes occasionnelles, latence. Si la tête bouge et qu'un clip est suivi,
+    la pose du clip (bruit + glissement sur l'oreille) est convertie pour exprimer la sonde dans le repère de l'oreille."""
+    nf, dt = tr["nf"], tr["dt"]
+    Pw, Rw = tr["Pw"], tr["Rw"]
     he = P["trk_handeye"]*rng.standard_normal(3)
-    drift = np.stack([ar1(rng, nf, 1-tr["dt"]/1.0, P["trk_drift"]) for _ in range(3)], 1)
-    Rm = np.zeros_like(Rt); pm = np.zeros_like(Ot)
-    lat_im = P["trk_lat"]/tr["dt"]
+    drift = np.stack([ar1(rng, nf, 1-dt/1.0, P["trk_drift"]) for _ in range(3)], 1)
+    slip = np.stack([ar1(rng, nf, 1-dt/2.0, P["glissement"]) for _ in range(3)], 1)
+    Rm = np.zeros_like(Rw); pm = np.zeros_like(Pw)
+    hp = np.zeros_like(Pw); hR = np.zeros_like(Rw)
+    lat_im = P["trk_lat"]/dt
     for k in range(nf):
-        p0, R0 = interp_pose(Ot, Rt, k-lat_im)
+        p0, R0 = interp_pose(Pw, Rw, k-lat_im)
         Rm[k] = R0 @ exp_so3(P["trk_rot"]*DEG*rng.standard_normal(3))
         pm[k] = p0 + he + drift[k] + P["trk_pos"]*rng.standard_normal(3)
+        if rng.random() < P["aberrants"]:
+            pm[k] += P["aberrant_mm"]*rng.standard_normal(3)
+            Rm[k] = Rm[k] @ exp_so3(P["aberrant_deg"]*DEG*rng.standard_normal(3))
+        if P["comp_tete"]:
+            h0, H0 = interp_pose(tr["Ht"], tr["HR"], k-lat_im)
+            hR[k] = H0 @ exp_so3(P["trk_rot"]*DEG*rng.standard_normal(3) + slip[k]/30.0)
+            hp[k] = h0 + slip[k] + P["trk_pos"]*rng.standard_normal(3)
+    if P["comp_tete"]:
+        for k in range(nf):
+            pm[k] = hR[k].T @ (pm[k]-hp[k])
+            Rm[k] = hR[k].T @ Rm[k]
     return pm, Rm
+
+def filtre_median(pe, Re, w=5):
+    """Filtre médian glissant sur les positions et les rotations (relatives à l'image centrale)."""
+    n = len(pe); h = w//2
+    po, Ro = pe.copy(), Re.copy()
+    for k in range(n):
+        idx = [i for i in range(max(0, k-h), min(n, k+h+1))]
+        po[k] = np.median(pe[idx], axis=0)
+        rel = np.array([log_so3(Re[k].T @ Re[i]) for i in idx])
+        Ro[k] = Re[k] @ exp_so3(np.median(rel, axis=0))
+    return po, Ro
 
 HARM = 4   # nombre d'harmoniques azimutales du modèle local de surface
 
@@ -295,7 +337,10 @@ def run_config(tr, cfg, rng, P):
     nf, nr, Bz = tr["nf"], tr["nr"], P["B"]
     Ot, Rt, Tt = tr["O"], tr["R"], tr["T"]
     loc = local_ring(tr, Bz)
-    if cfg == "ref":
+    if cfg == "Tm":
+        pe, Re, _ = run_config(tr, "T", rng, P)
+        pe, Re = filtre_median(pe, Re)
+    elif cfg == "ref":
         pe, Re = Ot.copy(), Rt.copy()
     elif cfg == "T":
         pm, Rm = mesures_suivi(tr, rng, P)
@@ -314,7 +359,8 @@ def run_config(tr, cfg, rng, P):
         # recalé en douceur sur le suivi externe quand celui-ci voit la poignée.
         pm, Rm = mesures_suivi(tr, rng, P)
         ok = masque_occultation(nf, rng, P)
-        incs = gyro_increments(tr, rng, P)
+        Re_g = gyro_orientation(tr, rng, P)
+        incs = [np.eye(3)] + [Re_g[k-1].T @ Re_g[k] for k in range(1, nf)]
         scale = P["vo_scale"]*rng.standard_normal()
         Re = np.zeros_like(Rt); pe = np.zeros_like(Ot)
         cen = np.stack([loc[:, :, 0].mean(1), loc[:, :, 1].mean(1), np.full(nf, Bz)], 1)
@@ -329,7 +375,8 @@ def run_config(tr, cfg, rng, P):
             if ok[k]:
                 Rh = np.concatenate([Re[:k], Rg[None]]); Ph = np.concatenate([pe[:k], pe[k-1][None]])
                 _, R_at = interp_pose(Ph, Rh, k-d_im)
-                Re[k] = Rg @ exp_so3(gr*log_so3(R_at.T @ Rm[k]))
+                innov_r = log_so3(R_at.T @ Rm[k])
+                Re[k] = Rg @ exp_so3(gr*innov_r) if np.linalg.norm(innov_r) < P["gate_deg"]*DEG else Rg
             else:
                 Re[k] = Rg
             dzt = (Ot[k]-Ot[k-1]) @ Rt[k][:, 2]
@@ -347,7 +394,8 @@ def run_config(tr, cfg, rng, P):
             if ok[k]:
                 Ph = np.concatenate([pe[:k], pp[None]]); Rh = np.concatenate([Re[:k], Re[k][None]])
                 p_at, _ = interp_pose(Ph, Rh, k-d_im)
-                pe[k] = pp + gp*(pm[k]-p_at)
+                innov = pm[k]-p_at
+                pe[k] = pp + gp*innov if np.linalg.norm(innov) < P["gate_mm"] else pp
             else:
                 pe[k] = pp
     elif cfg in ("Ec", "Vc"):
@@ -540,7 +588,7 @@ def parametres(args):
                 sigma_m=0.02, gyro_bias=args.biais_gyro, gyro_arw=0.01,
                 enc_sigma=0.005, vo_sigma=0.01, vo_scale=0.003, icp_prior_ax=0.3, lat_prior=0.15,
                 trk_pos=args.bruit_suivi, trk_handeye=args.erreur_main_pointe, trk_drift=0.03, trk_rot=0.1,
-                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
+                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, gate_mm=0.5, gate_deg=1.5, aberrants=args.aberrants, aberrant_mm=1.0, aberrant_deg=3.0, glissement=args.glissement_clip, tete_mm=args.tete_mm, tete_deg=args.tete_deg, comp_tete=(args.compensation_tete == 'oui' and (args.tete_mm > 0 or args.tete_deg > 0)), lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
 
 def main():
     ap = argparse.ArgumentParser()
@@ -554,6 +602,11 @@ def main():
     ap.add_argument("--desynchro", type=float, default=0.0, help="part de la latence non compensée par l'algorithme, ms")
     ap.add_argument("--vitesse", type=float, default=5.0, help="vitesse moyenne de retrait, mm/s")
     ap.add_argument("--mouvement", choices=["saccade", "lisse"], default="saccade", help="mouvement de la main : saccadé (défaut, cas sévère) ou lissé")
+    ap.add_argument("--tete-mm", type=float, default=0.0, help="mouvement de la tête, translation (écart-type, mm)")
+    ap.add_argument("--tete-deg", type=float, default=0.0, help="mouvement de la tête, rotation (écart-type, °)")
+    ap.add_argument("--compensation-tete", choices=["oui", "non"], default="oui", help="suivi d'un clip sur l'oreille et gyroscope sur la tête")
+    ap.add_argument("--glissement-clip", type=float, default=0.1, help="glissement du clip sur l'oreille (écart-type, mm)")
+    ap.add_argument("--aberrants", type=float, default=0.0, help="probabilité par image d'une mesure aberrante du suivi externe")
     ap.add_argument("--conduits", default="realiste,droit_conique,droit_cylindre,relief")
     ap.add_argument("--sortie", default=None)
     ap.add_argument("--test-externe", action="store_true", help="essai de recalage sur la partie visible du conduit")
@@ -563,12 +616,12 @@ def main():
     if args.test_externe:
         test_externe(args, P)
         return
-    cfgs = ["ref", "E", "V", "Ec", "Vc", "T", "F", "I"]
+    cfgs = ["ref", "E", "V", "Ec", "Vc", "T", "Tm", "F", "I"]
     lignes = []
     def out(s=""):
         print(s); lignes.append(s)
-    out("Simulateur du scanner à anneau laser : %d graines, biais gyroscope %.2f °/s, inclinaison de la sonde %.1f°, bruit de mesure %.3f mm, mouvement %s, vitesse %.0f mm/s, latence du suivi %.0f ms (non compensée : %.0f ms)"
-        % (args.graines, args.biais_gyro, args.inclinaison, P["sigma_m"], args.mouvement, args.vitesse, args.latence_suivi, args.desynchro))
+    out("Simulateur du scanner à anneau laser : %d graines, biais gyroscope %.2f °/s, inclinaison de la sonde %.1f°, bruit de mesure %.3f mm, mouvement %s, vitesse %.0f mm/s, latence du suivi %.0f ms (non compensée : %.0f ms), tête %.1f mm / %.1f° (compensation %s, glissement du clip %.2f mm), aberrants %.0f %%"
+        % (args.graines, args.biais_gyro, args.inclinaison, P["sigma_m"], args.mouvement, args.vitesse, args.latence_suivi, args.desynchro, args.tete_mm, args.tete_deg, args.compensation_tete, args.glissement_clip, 100*args.aberrants))
     out("Moyenne (écart-type) sur les graines. Axe final = erreur de position axiale à la fin du retrait (|mm|).")
     t0 = time.time()
     for nom in args.conduits.split(","):
@@ -585,7 +638,7 @@ def main():
                 res[c].append(metriques(canal, tr, pe, Re, q, P))
         out("\nConduit « %s » (%d images environ par retrait)" % (nom, int(np.mean(nfr))))
         out("%-6s %17s %13s %15s %15s %15s" % ("Config", "RMS surface (mm)", "95e c. (mm)", "Axe final (mm)", "Latéral RMS", "Orient. fin (°)"))
-        lab = {"ref": "poses vraies", "E": "E codeur+ICP", "V": "V odom.+ICP", "Ec": "E codeur+centre", "Vc": "V odom.+centre", "T": "T suivi ext.", "F": "F fusion", "I": "I ICP seul"}
+        lab = {"ref": "poses vraies", "E": "E codeur+ICP", "V": "V odom.+ICP", "Ec": "E codeur+centre", "Vc": "V odom.+centre", "T": "T suivi ext.", "Tm": "Tm suivi+médiane", "F": "F fusion", "I": "I ICP seul"}
         for c in cfgs:
             m = {k: np.array([r[k] for r in res[c]]) for k in res[c][0]}
             f = lambda k: "%6.3f (%5.3f)" % (m[k].mean(), m[k].std())

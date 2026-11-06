@@ -171,6 +171,27 @@ Lecture :
 4. **Conséquence sur l'exigence R4** (horodatage ≤ 0,5 ms, calculée pour un mouvement relatif de 100 mm/s) : pour la forme, des vitesses de main de 5 à 10 mm/s tolèrent plusieurs millisecondes, **à condition de connaître la latence** (à mesurer à ±5 ms environ) et d'horodater les images. L'exigence de 0,5 ms n'est utile que pour des mouvements rapides ou pour la précision de position axiale. À reconsidérer, elle n'est plus un critère dimensionnant dans mes hypothèses.
 5. **Limites** : latence constante (pas de variation ni de pertes d'images), mouvement lissé choisi par moi (filtre passe-bas de l'ordre de 2 Hz), gain de fusion non réajusté, pas de mouvement de la tête ni de valeurs aberrantes.
 
+### Mouvement de la tête et valeurs aberrantes du suivi (v0.5 du simulateur)
+Modèle : la tête (donc l'oreille) bouge dans le repère du suivi externe (translation et rotation aléatoires lissées, corrélées sur environ 1 s). Le suivi externe mesure la pose de la sonde dans son propre repère. **Compensation** : un clip fixé sur l'oreille est suivi par le même capteur (bruit comme la poignée, plus un **glissement** lent du clip sur l'oreille) et sert à exprimer la sonde dans le repère de l'oreille ; un gyroscope sur la tête retire la rotation de la tête du gyroscope de la sonde. **Valeurs aberrantes** : avec une probabilité par image, la pose du suivi est décalée de 1 mm et 3° (marqueur mal détecté, reflet). La fusion rejette les corrections dont l'écart dépasse 0,5 mm ou 1,5° ; « T + médiane » est le suivi seul avec un filtre médian sur 5 images. Conduit avec coudes, mouvement de main lissé, 5 mm/s, 4 graines. RMS du nuage (mm), erreur latérale RMS entre parenthèses ; résultats : `tools/simulation/resultats_tete_aberrants.txt`.
+
+| Scénario | Suivi du centre seul | Suivi externe T | T + médiane | **Fusion F** |
+|---|---|---|---|---|
+| Référence (tête immobile) | 0,254 | 0,067 | 0,061 | 0,062 |
+| Tête 1,5 mm / 1,5°, **sans compensation** | 0,234 | **1,37** | 1,37 | 0,274 |
+| Tête 1,5 mm / 1,5°, compensée (glissement du clip 0,1 mm) | 0,242 | 0,150 | 0,138 | **0,122** |
+| Tête 1,5 mm / 1,5°, compensée (glissement 0,3 mm) | 0,242 | 0,367 | 0,359 | **0,304** |
+| Tête 3 mm / 3°, compensée (glissement 0,1 mm) | 0,242 | 0,149 | 0,137 | **0,121** |
+| Valeurs aberrantes 3 % (tête immobile) | 0,254 | **0,183** | 0,062 | 0,061 |
+| Tête 1,5 mm / 1,5° compensée + aberrants 3 % | 0,242 | 0,252 | 0,148 | **0,128** |
+
+Lecture :
+1. **Sans compensation de la tête, le suivi externe seul est inutilisable** : le mouvement de la tête passe directement dans la mesure (1,37 mm). La fusion limite les dégâts (0,27 mm) parce que le suivi du centre de la lumière est relatif à l'oreille et que la porte de rejet écarte une partie des corrections incohérentes ; je n'ai pas isolé la part de chaque effet.
+2. **La compensation par clip coûte de l'ordre de 0,06 à 0,09 mm** : de 0,062 à 0,122 mm pour la fusion (bruit du clip et glissement de 0,1 mm). Avec un clip qui glisse de 0,3 mm, l'erreur monte à 0,30-0,37 mm : **le glissement du clip sur l'oreille domine et il est lent, donc ni la fusion ni un filtre ne le corrigent**. Il faut un clip rigide (glissement de l'ordre de 0,05 à 0,1 mm), ou suivre l'oreille elle-même avec le capteur 3D externe, sans clip (idée de la section 7.2).
+3. **L'amplitude du mouvement de la tête (1,5 ou 3 mm et degrés) n'a pas d'effet une fois compensée** : seule compte la qualité de la mesure du clip.
+4. **Les valeurs aberrantes doivent être rejetées** : à 3 %, le suivi brut passe de 0,067 à 0,183 mm ; la médiane (0,062) et la fusion avec porte (0,061) rétablissent le niveau nominal.
+5. **Budget** : avec la tête mobile et un clip qui glisse de 0,1 mm, la meilleure configuration (fusion) donne 0,12 mm, au-dessus du nominal de 0,10 mm et sous le seuil Go de 0,15 mm ; avec aberrants en plus, 0,13 mm.
+6. **Limites** : mouvement de tête et glissement de clip modélisés par des processus lissés de mon choix ; gyroscope de tête supposé de même qualité que celui de la sonde ; valeurs aberrantes indépendantes d'une image à l'autre ; seuils de rejet fixés une fois (0,5 mm et 1,5°) sans réglage ; la **mâchoire**, qui déforme le conduit lui-même, n'est pas modélisée.
+
 ### Ce que ces résultats indiquent
 1. **Le contrôle du simulateur est correct** : avec les poses vraies, l'erreur vaut le bruit de mesure (0,019 mm).
 2. **Le recalage de surface seul ne donne pas la longueur** : l'axe dérive de 4 à 5 mm sur 24 mm (environ 18 %), conduit conique ou non. Confirme R1 pour l'axe.
@@ -188,7 +209,8 @@ Lecture :
 - **La spécification (§4.2 « IMU + ICP ») est insuffisante** : à retenir pour la mise à jour de la spécification.
 - **Le banc de la phase 1 ne peut pas se limiter à un codeur linéaire** si les fantômes ont des coudes : il faut une référence de pose en 6 degrés de liberté (bras motorisé, table à plusieurs axes ou suivi externe de référence).
 - **Le suivi externe de la poignée (option T3 du plan) reste la base de référence** pour la phase 1, **complété par le gyroscope et le suivi du centre de la lumière** (fusion F) pour tenir les occultations et un suivi imparfait. Le suivi du centre de la lumière avec gyroscope est la meilleure option sans suivi externe (0,25 mm avec coudes) mais ne tient pas encore le budget ; sa dérive restante est à comparer sur banc.
-- Prochaines étapes pour le simulateur : latence variable et pertes d'images, valeurs aberrantes, mouvement de la tête, coudes réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
+- **Le suivi de la tête est une exigence de conception à part entière** : fixation rigide du clip (glissement ≤ 0,1 mm) ou suivi de l'oreille sans clip ; rejet des valeurs aberrantes du suivi.
+- Prochaines étapes pour le simulateur : latence variable et pertes d'images, déformation du conduit par la mâchoire, suivi de l'oreille sans clip, coudes réalistes (rayon de courbure mesuré), mouvement de mâchoire, occultation du suivi, puis comparaison avec des données réelles du banc.
 
 ## 7. Photogrammétrie, échelle et recalage sur la partie visible
 
