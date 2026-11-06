@@ -1,6 +1,6 @@
 # Journal des décisions et points ouverts
 
-Dernière mise à jour : 5 novembre 2026. Les décisions ci-dessous viennent d'Arnaud ; les hypothèses sont signalées comme telles.
+Dernière mise à jour : 6 novembre 2026. Les décisions ci-dessous viennent d'Arnaud ; les hypothèses sont signalées comme telles.
 
 ## Décisions prises
 
@@ -14,6 +14,7 @@ Dernière mise à jour : 5 novembre 2026. Les décisions ci-dessous viennent d'A
 | 9 | Développement localisé en Chine | Coûts, fournisseurs et recrutement à raisonner en contexte chinois ; point ouvert : conformité des données et du dispositif (marché visé) |
 | 10 | Tous les types de pièces visés : embouts, coques ITE, et les autres | Le scanner doit couvrir la profondeur du 2ᵉ coude (ITE/IIC) ; la CAO et l'impression à confirmer pour chaque type |
 | 11 | Enveloppe de la phase 1 : 200 000 (devise à confirmer) | Première enveloppe donnée le 5 novembre 2026 ; à rapprocher de la décision 7 (pas de budget détaillé avant la phase 0) : l'enveloppe est un plafond, pas un budget chiffré |
+| 12 | **Retrait motorisé du scan : option produit prioritaire** (insertion manuelle, moteur uniquement en retrait, arrêt automatique et limite de force), pour réduire l'erreur de manipulation et automatiser la partie scan | À valider sur banc en phase 1 avec un critère d'indépendance de l'opérateur (P9, T13 de la spécification scanner) ; le centrage (passif, actif) et le dossier de sécurité d'un dispositif actif restent à résoudre ; le suivi externe reste l'architecture de référence et le repli |
 | 5 | Précision d'impression inférieure à 0,10 mm : valeur annoncée pour le dentaire | Non démontrée sur formes auriculaires ; première mesure à faire en semaine 5 |
 | 6 | SprintRay a déjà un cloud et un CAM intégré au cloud | Cloud et CAM : audit, paramétrage et extension de l'existant, pas de développement de zéro |
 | 7 | Aucun chiffre de budget pour le moment | Montants à remettre après la phase 0, à partir de coûts réels |

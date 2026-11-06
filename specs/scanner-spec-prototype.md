@@ -1,6 +1,8 @@
 # Spécification technique : prototype de scanner 3D du conduit auditif (Phase 1)
 
-Version 0.3 (brouillon). Les valeurs chiffrées sont des cibles de départ à valider par les premiers essais.
+Version 0.4 (brouillon). Les valeurs chiffrées sont des cibles de départ à valider par les premiers essais.
+
+**Mise à jour v0.4 (6 novembre 2026) :** le **retrait motorisé** devient l'option produit prioritaire (décision 12 de `DECISIONS.md`) pour réduire l'erreur de manipulation et automatiser le scan ; ajout de l'exigence P9, de l'essai T13 et d'un critère Go (indépendance de l'opérateur), et révision de 4.2 et 3.
 
 **Mise à jour v0.3 (6 novembre 2026) :** intègre les calculs et simulations de `docs/conception-scanner.md` (géométrie de la tête A, architecture de pose, suivi de la tête, latence, retrait motorisé) et les décisions du 5 novembre. Les modifications portent sur §2 (note), §4.1, §4.2, §4.3, §4.4, §5, §6, §10 et §11. Les résultats de simulation sont des ordres de grandeur sur un conduit synthétique : ils orientent la conception, ils ne valident rien.
 
@@ -25,6 +27,7 @@ Version 0.3 (brouillon). Les valeurs chiffrées sont des cibles de départ à va
 | P6 | Vitesse de retrait manuelle tolérée | jusqu'à 10 mm/s |
 | P7 | Résolution du maillage final | pas de 0,1 mm |
 | P8 | Sortie | STL étanche (watertight), unités mm, repère standardisé |
+| P9 | Indépendance de l'opérateur (v0.4) | taux de scans complets du premier coup ≥ 90 % ; écart du RMS entre opérateurs ≤ 0,03 mm (hypothèse) ; écart de durée entre opérateurs à relever |
 
 *Note v0.3 sur P6 et P7 :* avec 30 mesures par seconde et un retrait à 10 mm/s, le pas axial entre anneaux est de 0,33 mm ; l'erreur d'interpolation sur un conduit lisse est négligeable (de l'ordre de 0,003 mm), donc **le pas de maillage de 0,1 mm (P7) n'impose pas une cadence de 100 mesures/s**. Le flou de bouger est de 10 µm pour 10 mm/s et 1 ms d'exposition.
 
@@ -33,6 +36,7 @@ Version 0.3 (brouillon). Les valeurs chiffrées sont des cibles de départ à va
 - Source laser de **classe 1** (IEC 60825-1), à vérifier avec la fiche technique du composant.
 - Pointe de sonde **atraumatique**, diamètre ≤ 4,5 mm, avec **butée mécanique** empêchant tout contact avec le tympan, y compris sur fantôme.
 - Température de la pointe ≤ 41 °C (mesure par capteur, coupure automatique).
+- **Retrait motorisé (v0.4)** : insertion toujours manuelle ; le moteur ne fait que retirer la sonde, avec arrêt automatique, limite de force, butée de profondeur et arrêt à la moindre alarme ; dossier de sécurité d'un dispositif actif à constituer dès la phase 1.
 - Usage limité aux fantômes en phase 1 ; aucun essai sur personne avant évaluation réglementaire et éthique.
 
 ## 4. Architecture
@@ -67,7 +71,7 @@ Estimation de précision (théorique, avant étalonnage), capteur de 400 px, obj
 - **Fusion** du suivi du centre, du gyroscope et du suivi externe (correction en douceur, rejet des mesures aberrantes par porte à 0,5 mm / 1,5° ou filtre médian) : simulée à 0,06 à 0,13 mm selon les perturbations (occultation, latence, tête mobile, aberrants).
 - **Axe** : codeur sur le banc ; en manuel, source à trancher par essais (odométrie visuelle des images vidéo, protocole `docs/protocole-experience-otoscope-colmap.md`, ou suivi externe).
 
-**Options à comparer en phase 1 sur le même banc :** (a) suivi externe + gyroscopes + fusion (référence, voie la moins risquée) ; (b) sans suivi externe : retrait motorisé avec centrage de la sonde (passif au contact, actif sans contact), simulé à 0,106 mm au mieux et à 0,14 mm au mieux avec un centrage au contact, **sous des hypothèses de centrage et d'alignement non démontrées** (sections 8.2, 8.5, 8.6).
+**Options à comparer en phase 1 sur le même banc :** (a) suivi externe + gyroscopes + fusion en main libre (référence et repli, voie la moins risquée) ; (b) **retrait motorisé avec centrage de la sonde, option produit prioritaire (v0.4)** : sans suivi externe, simulé à 0,106 mm au mieux avec centrage actif sans contact et à 0,14 mm au mieux avec un centrage au contact, **sous des hypothèses de centrage et d'alignement non démontrées** (sections 8.2, 8.5, 8.6) ; (c) **retrait motorisé combiné au suivi externe** (hybride, non simulé) : sonde centrée et alignée par la mécanique, pose absolue fournie par le suivi. Le moteur apporte surtout la reproductibilité du geste, pas un gain de précision à lui seul (vitesse constante seule : aucun gain en simulation).
 
 ### 4.3 Électronique
 
@@ -110,12 +114,14 @@ Estimation de précision (théorique, avant étalonnage), capteur de 400 px, obj
 | T10 | Mouvement de la tête sur fantôme monté sur un support mobile : compensation par clip et gyroscope de tête, glissement du clip | glissement ≤ 0,1 mm ; erreur de pose avec tête mobile ≤ 0,15 mm RMS |
 | T11 | Si l'option sans suivi externe est étudiée : décentrage et inclinaison obtenus par le retrait motorisé et le centrage, déformation de la paroi (fantôme souple) | décentrage ≤ 0,05 mm, inclinaison ≤ 0,5°, déformation ≤ 0,05 mm (valeurs supposées par les simulations) |
 | T12 | Odométrie visuelle (protocole `docs/protocole-experience-otoscope-colmap.md`) | critères du protocole |
+| T13 | **Indépendance de l'opérateur (v0.4)** : au moins 3 opérateurs de niveaux différents (dont un novice), plusieurs fantômes, 5 scans chacun, en retrait manuel puis en retrait motorisé | P9 : taux de scans complets du premier coup ≥ 90 % ; écart du RMS entre opérateurs ≤ 0,03 mm ; gain du retrait motorisé sur l'écart entre opérateurs mesuré |
 
 **Mesure de l'erreur :** distance point-surface entre le maillage et la référence après alignement optimal (RMS, 95e centile, maximum), avec cartographie des écarts.
 
 ## 6. Critères Go / No-Go de la phase 1
 
 - **Go :** P2, P3, P4 et P5 atteints sur au moins 3 fantômes, avec au moins une des deux têtes ; T8 validé.
+- **Indépendance de l'opérateur (v0.4)** : P9 atteint avec le retrait motorisé (T13), le retrait manuel servant de comparaison.
 - **Précision de pose (v0.3)** : le critère P2 est évalué aussi en **scan manuel sur un fantôme à coudes**, avec l'architecture de pose retenue en 4.2. Les simulations donnent 0,06 à 0,13 mm avec suivi externe et fusion (selon les perturbations) et 0,25 mm sans suivi externe en main libre : la tenue du seuil de 0,15 mm sans suivi externe n'est pas acquise.
 - **Go conditionnel :** précision comprise entre 0,1 et 0,15 mm avec une cause identifiée et corrigeable.
 - **No-Go :** précision > 0,15 mm sans amélioration plausible ; ou impossibilité de tenir le diamètre de pointe ≤ 4,5 mm.
@@ -169,4 +175,4 @@ Estimation de précision (théorique, avant étalonnage), capteur de 400 px, obj
 5. Banc de référence de pose en 6 degrés de liberté (bras robotisé, table multi-axes) disponible en interne ou en sous-traitance ?
 6. Choix du suivi externe (capteur 3D, caméras à repères) et du clip, ou suivi de l'oreille sans clip ; précision mesurée en T9 et T10.
 7. Odométrie visuelle : faisable ou non avec une caméra miniature (expérience T12).
-8. Retrait motorisé : centrage passif, actif, ou abandon au profit du suivi externe (T11) ; raideur du conduit à mesurer.
+8. Retrait motorisé (option produit prioritaire, décision 12) : centrage passif, actif, ou hybride avec suivi externe (T11, T13) ; raideur du conduit à mesurer ; dossier de sécurité d'un dispositif actif.

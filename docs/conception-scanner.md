@@ -291,7 +291,7 @@ Lecture :
 Intéressant, mais **ce n'est pas le moteur qui compte, c'est le centrage et l'ancrage**. Proposition :
 1. **Phase 1 : un retrait motorisé sur banc**, comme instrument de référence pour les fantômes (il en faut un de toute façon pour valider), sans en faire encore un choix de produit.
 2. **Concevoir et tester des centrages passifs** (collerette souple, trois points de contact, gaine) sur fantômes souples : mesurer le décentrage et l'inclinaison obtenus, et la déformation de la paroi. **La simulation de 8.5 montre qu'un centrage au contact simple ne tient pas le budget** ; prévoir aussi un centrage sans contact (correction active, guide dans la partie externe).
-3. **Décider du moteur plus tard**, selon les gains réels et le surcoût réglementaire d'un dispositif actif.
+3. **Le moteur est retenu comme option produit prioritaire** (décision 12 de `DECISIONS.md`, 6 novembre 2026), pour réduire l'erreur de manipulation et automatiser le scan ; à valider sur banc avec le critère d'indépendance de l'opérateur (section 8.7), en gardant le suivi externe comme repli.
 4. Étudier un **ancrage de la base sur l'oreille** (type bouchon de concha) pour un repère mécanique, en comparaison du suivi externe avec clip.
 
 ### 8.5 Déformation du conduit par un centrage au contact (simulation)
@@ -339,6 +339,15 @@ Lecture :
 6. **Limites** : régulateur simple, un seul niveau de décentrage latéral, pas de contact avec la paroi simulé ; inclinaison fixée en entrée ; coudes inventés.
 
 **Synthèse de la section 8** : sans suivi externe, le meilleur cas simulé est 0,106 mm (centrage actif plus alignement à 0,3°), contre 0,14 mm pour le meilleur centrage au contact, 0,25 mm en main libre et 0,075 à 0,12 mm avec suivi externe (sans et avec mouvement de la tête compensé par clip). Le suivi externe reste la voie la moins risquée pour la phase 1 ; le retrait motorisé avec centrage actif est une piste à explorer en parallèle sur banc.
+
+### 8.7 Valeur d'automatisation et décision du 6 novembre 2026
+Arnaud retient le retrait motorisé pour une raison que la simulation de précision ne mesurait pas : **réduire l'erreur de manipulation et automatiser la partie scan** de la chaîne scan → CAO → impression.
+
+- **Pourquoi c'est un vrai bénéfice** : vitesse, alignement et geste ne dépendent plus de l'opérateur. Repère de la concurrence : la formation à l'Otoscan demande environ 5 à 7 patients pour être à l'aise et 15 pour être sûr, et 70 % des opérateurs seulement atteignent la profondeur cible sans trou (chiffres du fabricant, sans méthode publiée). Un scan court et reproductible alimente mieux la CAO automatique, réduit les reprises et homogénéise les données du pilote.
+- **Ce que la simulation dit** : le moteur seul ne change pas la précision (vitesse constante seule : 0,269 mm contre 0,246 mm en main libre) ; la précision vient du centrage et de l'alignement. La valeur de l'automatisation doit donc se mesurer autrement : taux de scans complets du premier coup, écart entre opérateurs, durée. D'où l'exigence **P9** et l'essai **T13** de la spécification (v0.4).
+- **Conditions pour un produit** : insertion manuelle, moteur uniquement en retrait, arrêt automatique, limite de force, butée de profondeur ; centrage à résoudre (centrage au contact : déformation du conduit, 0,14 mm au mieux ; centrage actif : 0,106 mm au mieux, non démontré) ; dossier de sécurité et réglementaire d'un dispositif actif.
+- **Architecture recommandée à valider** : retrait motorisé avec centrage de la sonde, **combiné au suivi externe** (option hybride (c) de la spécification, non simulée) : la mécanique centre et aligne la sonde, le suivi fournit la pose absolue et sert de repli.
+- **Décision** : retrait motorisé = option produit prioritaire ; le suivi externe en main libre reste la référence et le repli en phase 1.
 
 ## 9. Prochaines étapes de conception
 1. **Simulateur** : version 0.1 faite (sections 6 et 7.2) ; à améliorer (estimateur par fenêtre glissante, coudes réalistes, mâchoire, occultation, biais systématique du capteur externe).

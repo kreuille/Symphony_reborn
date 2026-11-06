@@ -47,6 +47,7 @@ Version 0.3 (brouillon). Les chiffres sont des ordres de grandeur à ajuster ave
 |---|---|---|
 | Écart de forme | Distance entre votre maillage et le scan de référence, après alignement (RMS, 95e centile) | RMS ≤ 0,15 mm sur oreilles réelles (seuil Go ; la cible nominale du budget d'erreur est 0,10 mm, voir README : à 0,15 mm la marge de la chaîne de 0,2 mm est presque consommée) |
 | Taux de scan réussi du premier coup | Scans exploitables sans reprise / total | ≥ 85 % |
+| Indépendance de l'opérateur (v0.4) | Écart du taux de succès, de la durée et de l'erreur de forme entre opérateurs (au moins 3 par site, dont un novice) | à fixer d'après T13 de la phase 1 ; valeur de départ : écart de RMS ≤ 0,03 mm |
 | Temps de scan | Durée par oreille | ≤ 60 s |
 | Qualité du suivi (v0.3) | Taux d'images avec suivi masqué, taux de mesures aberrantes rejetées, glissement du clip estimé (par recalage sur la partie visible du pavillon), échelle du scan comparée à la partie visible | à fixer d'après les essais T9 et T10 de la phase 1 ; valeurs de départ des simulations : glissement ≤ 0,1 mm, occultation tolérée jusqu'à environ un tiers du retrait |
 | Temps total jusqu'à la pièce finie | Du début du scan à la pièce prête (cycle capsule, lavage, séchage, cure inclus) | ≤ 60 min ; l'objectif de 30 min est abandonné tant que le temps de cycle G1 n'est pas mesuré |
