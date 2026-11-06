@@ -8,6 +8,7 @@ Documents de travail issus de l'étude marché et business de la solution AI Ear
 | `AI_Ear_Microfactory_Business_Plan_FR.docx` / `_EN.docx` | Business plan (11 pages) |
 | `AI_Ear_Microfactory_Introduction_FR.docx` / `_EN.docx` | Document d'introduction (2 pages) pour une première prise de contact avec un grand fabricant d'aides auditives ; champs `[Société]`, `[Nom, fonction]` et contact à compléter (surlignés en jaune) |
 | `AI_Ear_Microfactory_Introduction_Starkey_France_FR.docx` / `_EN.docx` | Version personnalisée pour Starkey France (faits tirés de starkey.fr) ; contact et destinataire à compléter (surlignés en jaune) |
+| `AI_Ear_Microfactory_Pitch_Starkey_France_FR.pptx` / `_EN.pptx` | Pitch de 14 diapositives pour Starkey France (histoire, vision, ce que Starkey France pourrait y gagner, co-construction, prochaines étapes) ; sans coût interne, marge ni prix ; contact à compléter (surligné en jaune) |
 | `AI_Ear_Microfactory_Pitch_FR.pptx` / `_EN.pptx` | Présentation pitch (24 diapositives) |
 
 ## Modèle retenu
