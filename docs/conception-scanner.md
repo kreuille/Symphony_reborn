@@ -249,7 +249,52 @@ Lecture :
 - **Protocole détaillé** : `docs/protocole-experience-otoscope-colmap.md` (fantômes générés par `tools/photogrammetrie/exporter_fantome.py`, analyse par `tools/photogrammetrie/analyse_colmap.py`).
 - **Expérience proposée** : filmer un fantôme d'oreille en silicone de géométrie connue avec un otoscope bas coût, traiter la vidéo avec COLMAP, et mesurer (a) si la reconstruction fonctionne dans ce milieu peu texturé, (b) la forme et la dérive d'échelle par rapport au fantôme. Cela teste directement l'hypothèse de l'odométrie visuelle (option V), à faible coût. Fantômes d'abord ; tout essai sur une personne demande consentement et cadre éthique.
 
-## 8. Prochaines étapes de conception
+## 8. Retrait motorisé et sonde auto-centrée
+
+### 8.1 Idée
+Automatiser le retrait : l'opérateur place la sonde à la profondeur voulue (insertion manuelle), puis un moteur la retire à vitesse constante pendant le scan, avec arrêt automatique. Comparaison avec un retrait IVUS (« pullback »). Le moteur ne fait que **retirer** (jamais pousser vers le tympan) : c'est le sens le plus sûr.
+
+### 8.2 Ce que le simulateur indique
+Le simulateur ne modélise pas la mécanique : j'ai représenté une sonde motorisée **auto-centrée** par un décentrage latéral de 0,05 mm (au lieu de 0,3 mm), une inclinaison de 0,3° (au lieu de 2°) et une vitesse constante de 3 mm/s. Tête mobile (1,5 mm et 1,5°), compensée par un gyroscope sur la tête (pas de clip ni de suivi externe). Conduit avec coudes, 4 graines. Résultats : `tools/simulation/resultats_sonde_motorisee.txt`.
+
+| Cas | Suivi du centre, axe par codeur (RMS, mm) | Fusion avec suivi externe et clip (mm) |
+|---|---|---|
+| Main libre | 0,246 | 0,122 |
+| **Sonde motorisée auto-centrée** | **0,100** | 0,119 |
+| Idem, gyroscope 10 fois meilleur | 0,094 | 0,119 |
+
+Attribution (suivi du centre seul, même conduit et même tête mobile) :
+
+| Changement par rapport à la main libre | RMS (mm) |
+|---|---|
+| Vitesse constante de 3 mm/s seule | 0,269 (aucun gain) |
+| Inclinaison 0,3° seule | 0,214 |
+| Décentrage 0,05 mm seul | 0,164 |
+| Décentrage 0,05 mm + inclinaison 0,3° (vitesse libre, 5 mm/s) | 0,104 |
+
+Lecture :
+1. **Ce qui fait gagner de la précision, c'est que la sonde reste centrée et alignée sur le conduit, pas que sa vitesse soit constante.** Le moteur seul ne change rien ; il n'est utile que s'il s'accompagne d'un guidage ou d'un centrage mécanique.
+2. Avec ce centrage, le suivi du centre de la lumière **atteint le budget nominal (0,10 mm) sans suivi externe ni clip**, la tête étant compensée par un simple gyroscope sur la base. C'est le seul cas simulé sans suivi externe qui y parvient.
+3. Le centrage peut se faire **sans moteur** (collerette ou structure auto-centrante) : le moteur apporte surtout la reproductibilité, la protection (arrêt, limite de force) et les mains libres.
+4. **Hypothèse non démontrée** : j'ai supposé qu'on obtient 0,05 mm de décentrage et 0,3° d'inclinaison. Aucune conception mécanique ne le garantit ; c'est le point à prouver sur banc.
+5. **Non modélisé** : la **déformation du conduit par le contact** (le conduit est souple ; une collerette ou une gaine en contact peut le dilater de plusieurs dixièmes de millimètre, comme le fait une empreinte au silicone, que l'Otoscan évite en restant sans contact), le confort et l'hygiène (gaine à usage unique), les frottements dans les coudes, la mâchoire.
+
+### 8.3 Avantages et inconvénients
+
+| | Avantages | Inconvénients |
+|---|---|---|
+| Moteur de retrait | Reproductible, mains libres, retrait seul (sens sûr), arrêt automatique et limite de force, durée courte et constante | Dispositif actif au contact du patient (dossier de sécurité plus lourd), coût et complexité, risques d'accrochage |
+| Centrage mécanique | Alignement sur le conduit (gain principal), suivi plus simple | Risque de contact et de déformation de la paroi, adaptation aux tailles, usage unique |
+| Ancrage de la base dans la concha | Repère lié à l'oreille : moins besoin de clip et de suivi externe | Fixation rigide à prouver (le glissement du clip dominait l'erreur) |
+
+### 8.4 Avis
+Intéressant, mais **ce n'est pas le moteur qui compte, c'est le centrage et l'ancrage**. Proposition :
+1. **Phase 1 : un retrait motorisé sur banc**, comme instrument de référence pour les fantômes (il en faut un de toute façon pour valider), sans en faire encore un choix de produit.
+2. **Concevoir et tester des centrages passifs** (collerette souple, trois points de contact, gaine) sur fantômes souples : mesurer le décentrage et l'inclinaison obtenus, et la déformation de la paroi.
+3. **Décider du moteur plus tard**, selon les gains réels et le surcoût réglementaire d'un dispositif actif.
+4. Étudier un **ancrage de la base sur l'oreille** (type bouchon de concha) pour un repère mécanique, en comparaison du suivi externe avec clip.
+
+## 9. Prochaines étapes de conception
 1. **Simulateur** : version 0.1 faite (sections 6 et 7.2) ; à améliorer (estimateur par fenêtre glissante, coudes réalistes, mâchoire, occultation, biais systématique du capteur externe).
 1bis. **Expériences bas coût** : otoscope USB et COLMAP sur fantôme (7.3) ; mesure de la précision d'un capteur 3D externe candidat sur fantôme d'oreille.
 2. **Banc optique tête A** : choix du module caméra (résolution, cadence, champ), du laser vert 520 nm, du miroir conique, mesure de la résolution réelle.

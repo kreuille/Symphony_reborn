@@ -169,7 +169,7 @@ def lisser(x, alpha=0.3, passes=2):
 def gen_truth(canal, rng, P):
     dt, nf, nr, Bz = P["dt"], P["nframes"], P["nrays"], P["B"]
     xv = ar1(rng, nf, 0.95, 1.0)
-    v = P["v0"]*(1+0.3*xv)
+    v = P["v0"]*(1+P["var_vitesse"]*xv)
     sp = np.zeros(nf)
     sp[0] = P["s_start"]
     for k in range(1, nf):
@@ -179,7 +179,7 @@ def gen_truth(canal, rng, P):
     sp = sp[:nf_eff]
     nf = nf_eff
     rho_l = 1-dt/0.5
-    lat = np.stack([ar1(rng, nf, rho_l, 0.3), ar1(rng, nf, rho_l, 0.3)], 1)
+    lat = np.stack([ar1(rng, nf, rho_l, P["decentrage"]), ar1(rng, nf, rho_l, P["decentrage"])], 1)
     lat = np.clip(lat, -0.8, 0.8)
     tilt = np.stack([ar1(rng, nf, rho_l, P["tilt"]*DEG), ar1(rng, nf, rho_l, P["tilt"]*DEG)], 1)
     roll = ar1(rng, nf, 1-dt/2.0, 20*DEG)
@@ -588,7 +588,7 @@ def parametres(args):
                 sigma_m=0.02, gyro_bias=args.biais_gyro, gyro_arw=0.01,
                 enc_sigma=0.005, vo_sigma=0.01, vo_scale=0.003, icp_prior_ax=0.3, lat_prior=0.15,
                 trk_pos=args.bruit_suivi, trk_handeye=args.erreur_main_pointe, trk_drift=0.03, trk_rot=0.1,
-                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, gate_mm=0.5, gate_deg=1.5, aberrants=args.aberrants, aberrant_mm=1.0, aberrant_deg=3.0, glissement=args.glissement_clip, tete_mm=args.tete_mm, tete_deg=args.tete_deg, comp_tete=(args.compensation_tete == 'oui' and (args.tete_mm > 0 or args.tete_deg > 0)), lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
+                k0=15, kmodel=KM, ordre=ORD, fus_pos=0.3, fus_rot=0.05, decentrage=args.decentrage, var_vitesse=args.variation_vitesse, gate_mm=0.5, gate_deg=1.5, aberrants=args.aberrants, aberrant_mm=1.0, aberrant_deg=3.0, glissement=args.glissement_clip, tete_mm=args.tete_mm, tete_deg=args.tete_deg, comp_tete=(args.compensation_tete == 'oui' and (args.tete_mm > 0 or args.tete_deg > 0)), lisse=(args.mouvement == 'lisse'), trk_lat=args.latence_suivi/1000.0, trk_desync=args.desynchro/1000.0, occl_bursts=args.occultation, occl_len=25, kappa_alpha=0.15, tilt=args.inclinaison)
 
 def main():
     ap = argparse.ArgumentParser()
@@ -607,6 +607,8 @@ def main():
     ap.add_argument("--compensation-tete", choices=["oui", "non"], default="oui", help="suivi d'un clip sur l'oreille et gyroscope sur la tête")
     ap.add_argument("--glissement-clip", type=float, default=0.1, help="glissement du clip sur l'oreille (écart-type, mm)")
     ap.add_argument("--aberrants", type=float, default=0.0, help="probabilité par image d'une mesure aberrante du suivi externe")
+    ap.add_argument("--decentrage", type=float, default=0.3, help="décalage latéral aléatoire de la sonde dans le conduit (écart-type, mm)")
+    ap.add_argument("--variation-vitesse", type=float, default=0.3, help="variation relative aléatoire de la vitesse de retrait")
     ap.add_argument("--conduits", default="realiste,droit_conique,droit_cylindre,relief")
     ap.add_argument("--sortie", default=None)
     ap.add_argument("--test-externe", action="store_true", help="essai de recalage sur la partie visible du conduit")
