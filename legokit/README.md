@@ -43,3 +43,15 @@ plots Ø4,8 × 1,8, pas 8 mm, hauteur 9,6 mm. Chaque pièce est une union de vol
 Une seule couleur (pas d'attribution par texture), pas de plaques/pentes/tuiles, glouton non optimal
 (pas de minimisation du nombre de pièces ni de la solidité). Pistes : couleurs via texture OBJ, pièces 1/3 hauteur
 (plates) pour plus de résolution verticale, optimisation du découpage (ILP).
+
+## Numéro de set → liste de pièces par couleur (`legoset.py`)
+
+```bash
+python3 legoset.py 10698 --out set_10698/
+```
+
+Télécharge une fois les CSV publics de Rebrickable (cache `~/.cache/legokit/rebrickable`, ou `--cache`, ou `LEGOKIT_CACHE`),
+puis écrit `pieces_par_couleur.csv` (couleur, code RVB, pièce, quantité, `imprimable` oui/non) et affiche le détail par couleur.
+Sont marquées imprimables les pièces nommées exactement « Brick / Plate / Tile N x M » (jusqu'à 12), que `legokit.brick_mesh` sait générer.
+Exemples : set 10698 → 790 pièces, 33 couleurs, 51 % générables ; set 11011 → 1500 pièces, 39 couleurs, 47 %.
+Pas encore fait : STL/3MF par couleur, pièces spéciales (pentes, arches, figurines), sous-ensembles et figurines de l'inventaire.
