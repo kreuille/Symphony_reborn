@@ -71,3 +71,24 @@ Exemple : set 10698 → 424 pièces sur 29 plateaux (une trentaine de couleurs),
 
 Les 3MF sont relus et vérifiés par `test_legoprint.py` (XML, dimensions, pièces dans le plateau, sans chevauchement),
 mais pas encore ouverts dans Bambu Studio : la couleur du filament est à choisir dans le trancheur si elle n'est pas reprise.
+
+## Notice de montage LDraw (`legonotice.py`)
+
+```bash
+python3 legonotice.py --set 1069-1 --out notice.html                       # modèle officiel du dépôt OMR LDraw
+python3 legonotice.py --model mon_modele.mpd --out notice.html             # votre propre fichier .mpd / .ldr
+python3 legonotice.py --model m.mpd --ldraw complete.zip --title "Mon set" # bibliothèque LDraw déjà téléchargée
+```
+
+Produit un fichier HTML **autonome** (aucune dépendance, fonctionne hors ligne, WebGL2) : une étape à la fois, flèches gauche/droite,
+souris pour tourner, molette pour zoomer, pièces de l'étape listées avec couleur, quantité, référence et nom. Les pièces de l'étape sont en couleur, les
+précédentes atténuées (case à décocher). Les pièces que `legoprint.py` sait imprimer sont marquées **imprimable**.
+
+- **Sources :** le modèle vient de l'OMR (`--set`, ~1 470 sets) ou d'un fichier ; les formes viennent de la bibliothèque LDraw
+  (`complete.zip`, ~150 Mo, téléchargée une fois dans `~/.cache/legokit/`). Hôtes à autoriser : `library.ldraw.org`, `www.ldraw.org`.
+- **Étapes :** celles du fichier (`0 STEP`). Les sous-modèles passent avant l'étape qui les pose ; un sous-modèle sans `STEP` forme une seule étape.
+  Les pièces définies dans le MPD (`0 FILE parts/...`) sont gérées.
+- **Tous les sets n'ont pas de modèle LDraw :** 10698 et 11011 (utilisés plus haut) n'y sont pas, `--set` le dit ; il faut alors un fichier `--model`
+  (créé avec LDraw/Bricklink Studio exporté en .ldr, ou trouvé en ligne). Les fichiers `.io` de Studio ne sont pas lus.
+- **Vérifié :** tests hors ligne (`test_legonotice.py`) et rendu contrôlé dans Chromium sur trois modèles OMR, de 28 à 2 320 pièces.
+  Limites : pas de multiplicateur « ×4 » pour un sous-assemblage répété (il est répété étape par étape), pas de pièces en rotation animée, pas d'export PDF.
