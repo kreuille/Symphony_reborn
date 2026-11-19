@@ -55,3 +55,19 @@ puis écrit `pieces_par_couleur.csv` (couleur, code RVB, pièce, quantité, `imp
 Sont marquées imprimables les pièces nommées exactement « Brick / Plate / Tile N x M » (jusqu'à 12), que `legokit.brick_mesh` sait générer.
 Exemples : set 10698 → 790 pièces, 33 couleurs, 51 % générables ; set 11011 → 1500 pièces, 39 couleurs, 47 %.
 Pas encore fait : STL/3MF par couleur, pièces spéciales (pentes, arches, figurines), sous-ensembles et figurines de l'inventaire.
+
+## Numéro de set → STL et 3MF par couleur (`legoprint.py`)
+
+```bash
+python3 legoprint.py 10698 --out kit_10698/                 # plateau 256x256 (X1, P1, A1)
+python3 legoprint.py 10698 --bed 180 180 --colors "Red,Black"   # A1 mini, seulement certaines couleurs
+```
+
+Pour chaque couleur : `kit_10698/<Couleur>/<Couleur>_NN.3mf` et `.stl`, un fichier par plateau d'impression (pièces rangées dans le plateau,
+marge 5 mm, écart 3 mm, plots vers le haut, sans supports), plus `resume.csv`. Le 3MF contient un objet par type de pièce et la couleur Rebrickable
+(`basematerials`) ; le STL contient le même plateau sans couleur.
+Dimensions : brique 9,6 mm, plaque et tuile 3,2 mm (+ plots 1,8 mm), jeu `--tol` 0,1 mm par côté.
+Exemple : set 10698 → 424 pièces sur 29 plateaux (une trentaine de couleurs), 366 pièces non gérées.
+
+Les 3MF sont relus et vérifiés par `test_legoprint.py` (XML, dimensions, pièces dans le plateau, sans chevauchement),
+mais pas encore ouverts dans Bambu Studio : la couleur du filament est à choisir dans le trancheur si elle n'est pas reprise.

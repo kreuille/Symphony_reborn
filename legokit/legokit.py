@@ -56,8 +56,9 @@ def _tube(cx, cy, z0, z1, ro, ri=0.0, n=SEG):
     if ri > 0: wall(ri, False)
     return np.array(tris)
 
-def brick_mesh(w, d, tol=0.1, studs=True, height=BRICK_H):
-    """Brique w x d plots, creuse, `tol` mm de jeu par côté pour l'impression FDM/résine."""
+def brick_shells(w, d, tol=0.1, studs=True, height=BRICK_H):
+    """Brique w x d plots, creuse, `tol` mm de jeu par côté pour l'impression FDM/résine.
+    Renvoie la liste des volumes fermés (qui se chevauchent) dont la pièce est l'union."""
     W, D = w*PITCH - 2*tol, d*PITCH - 2*tol
     x0, y0, H = tol, tol, height
     parts = [_box(x0, y0, H-TOP, x0+W, y0+D, H)]                      # plafond
@@ -76,7 +77,10 @@ def brick_mesh(w, d, tol=0.1, studs=True, height=BRICK_H):
         for i in range(w):
             for j in range(d):
                 parts.append(_tube((i+.5)*PITCH, (j+.5)*PITCH, H-TOP/2, H+STUD_H, STUD_D/2))
-    return np.concatenate(parts)
+    return parts
+
+def brick_mesh(*a, **k):
+    return np.concatenate(brick_shells(*a, **k))
 
 # ---------------------------------------------------------------- E/S maillages
 def write_stl(path, tris):
