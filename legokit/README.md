@@ -103,3 +103,24 @@ PDF A4, **2 étapes par page** : image de l'étape (caméra recadrée sur ce qui
 `--pdf` pilote Chrome, Chromium ou Edge sans interface (variable `CHROME` pour indiquer le binaire). Sans navigateur en ligne de commande :
 ouvrez `notice.html` et cliquez sur **PDF** (impression du navigateur, « Enregistrer au format PDF »). Exemple : 16 étapes → 8 pages, 0,7 Mo.
 Au-delà de ~300 étapes (gros modèles), le PDF devient lourd et lent à produire : un avertissement s'affiche.
+
+## Modèle construit avec les pièces d'un set (`legobuild.py`)
+
+Pour les boîtes de briques en vrac sans modèle LDraw (ex. 10698) : on choisit une forme, l'outil construit **uniquement avec les briques et couleurs de l'inventaire**.
+
+```bash
+python3 legobuild.py 10698 --shape sphere --out build_10698/ --pdf
+python3 legobuild.py 10698 --model ma_forme.stl --max-colors 12 --colors "Red,Blue,White"
+```
+
+1. Prend les briques « Brick N x M » de l'inventaire (plaques, tuiles, pièces spéciales et couleurs transparentes exclues par défaut ; `--trans` pour les transparentes).
+2. Garde les `--max-colors` couleurs les plus abondantes (8 par défaut ; 0 = toutes) ou celles de `--colors`.
+3. Cherche la plus grande taille de la forme (formes : sphere, cone, cylinder, torus, pyramid, ou STL/OBJ) qui se monte avec les stocks réels,
+   joints décalés d'une rangée à l'autre, briques flottantes retirées.
+4. Répartit les couleurs en dégradé vertical (teintes puis neutres), en respectant le stock par taille et par couleur.
+
+Sorties : `modele.ldr` (une étape par paquet de 10 briques), `notice.html` (+ `notice.pdf` avec `--pdf`), `pieces_utilisees.csv`, `pieces_restantes.csv`
+et `kit/<Couleur>/*.3mf|stl` pour imprimer **seulement** les pièces utilisées.
+Exemple : set 10698, sphère → 10×10×8, 72 briques sur 164 disponibles avec 8 couleurs (14×14×12, 285 briques avec 27 couleurs).
+La notice demande la bibliothèque LDraw (`--ldraw complete.zip` ou téléchargement dans le cache) ; `--no-notice` / `--no-print` pour s'en passer.
+Les codes couleur LDraw reprennent l'id Rebrickable quand la teinte correspond, sinon une couleur directe RVB.

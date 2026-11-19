@@ -53,7 +53,7 @@ def inventory(cache, set_num, spares=False):
     for (cid, pn), q in agg.items():
         c = colors.get(cid, {'name': f'#{cid}', 'rgb': '808080', 'is_trans': 'False'})
         nm = names.get(pn, '?'); cl = classify(nm)
-        out.append(dict(couleur=c['name'], rgb=c['rgb'], transparent=c['is_trans'] == 'True', part_num=pn, nom=nm,
+        out.append(dict(couleur=c['name'], color_id=int(cid) if cid.lstrip('-').isdigit() else -1, rgb=c['rgb'], transparent=c['is_trans'] == 'True', part_num=pn, nom=nm,
                         quantite=q, imprimable='oui' if cl else 'non',
                         type=cl[0] if cl else '', plots=f'{cl[1]}x{cl[2]}' if cl else ''))
     out.sort(key=lambda r: (r['couleur'], -r['quantite'], r['part_num']))

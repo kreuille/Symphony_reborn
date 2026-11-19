@@ -75,26 +75,32 @@ def main():
     cache = S.cache_dir(a.cache); s = S.find_set(cache, a.set)
     if not s: raise SystemExit(f'set {a.set} introuvable')
     inv = S.inventory(cache, s['set_num'], a.spares)
-    out = a.out or 'kit_' + s['set_num']; os.makedirs(out, exist_ok=True)
+    out = a.out or 'kit_' + s['set_num']
     want = {c.strip().lower() for c in a.colors.split(',')} if a.colors else None
+    rows, total_plates = print_kit(inv, out, tuple(a.bed), a.tol, want)
+    skipped = sum(r['quantite'] for r in inv if r['imprimable'] != 'oui')
+    print(f"\n{s['set_num']} {s['name']} : {sum(r[1] for r in rows)} pièces générées sur {total_plates} plateaux ; "
+          f'{skipped} pièces non gérées (voir legoset.py) -> {out}/')
+
+def print_kit(inv, out, bed, tol, want=None, quiet=False):
+    """inv : lignes d'inventaire (voir legoset.inventory) ; écrit un dossier par couleur. -> (résumé par couleur, nb de plateaux)."""
+    os.makedirs(out, exist_ok=True)
     by = defaultdict(list)
     for r in inv:
         if r['imprimable'] == 'oui' and (not want or r['couleur'].lower() in want): by[r['couleur']].append(r)
-    skipped = sum(r['quantite'] for r in inv if r['imprimable'] != 'oui')
     rows, total_plates = [], 0
     for color, L in sorted(by.items()):
         items = [(r['type'], *map(int, r['plots'].split('x'))) for r in L for _ in range(r['quantite'])]
-        plates = layout(items, tuple(a.bed))
+        plates = layout(items, tuple(bed))
         d = f'{out}/{slug(color)}'; os.makedirs(d, exist_ok=True)
         for n, p in enumerate(plates, 1):
-            write_3mf(f'{d}/{slug(color)}_{n:02d}.3mf', p, color, L[0]['rgb'], a.tol)
-            write_plate_stl(f'{d}/{slug(color)}_{n:02d}.stl', p, a.tol)
+            write_3mf(f'{d}/{slug(color)}_{n:02d}.3mf', p, color, L[0]['rgb'], tol)
+            write_plate_stl(f'{d}/{slug(color)}_{n:02d}.stl', p, tol)
         total_plates += len(plates); rows.append((color, len(items), len(plates)))
-        print(f'{color:<22} {len(items):>4} pièces -> {len(plates)} plateau(x)')
+        if not quiet: print(f'{color:<22} {len(items):>4} pièces -> {len(plates)} plateau(x)')
     with open(f'{out}/resume.csv', 'w', newline='', encoding='utf-8') as f:
         c = csv.writer(f); c.writerow(['couleur', 'pieces', 'plateaux']); c.writerows(rows)
-    print(f"\n{s['set_num']} {s['name']} : {sum(r[1] for r in rows)} pièces générées sur {total_plates} plateaux ; "
-          f'{skipped} pièces non gérées (voir legoset.py) -> {out}/')
+    return rows, total_plates
 
 if __name__ == '__main__':
     main()

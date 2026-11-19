@@ -149,6 +149,7 @@ def shape_voxels(name, width_studs):
     n = width_studs; nz = max(2, round(n * PITCH / BRICK_H))
     x, y, z = np.meshgrid((np.arange(n)+.5)/n*2-1, (np.arange(n)+.5)/n*2-1, (np.arange(nz)+.5)/nz*2-1, indexing='ij')
     if name == 'sphere': return x**2 + y**2 + z**2 <= 1
+    if name == 'cylinder': return x**2 + y**2 <= 1
     if name == 'cone':   return np.hypot(x, y) <= (1 - z) / 2
     if name == 'torus':  return (np.hypot(x, y) - .6)**2 + z**2 <= .3**2
     if name == 'pyramid': return np.maximum(abs(x), abs(y)) <= (1 - z) / 2
@@ -256,7 +257,7 @@ def export_kit(layers, nx, ny, out, bed, tol):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('model', nargs='?', help='fichier .stl ou .obj (Z = haut)')
-    ap.add_argument('--shape', choices=['sphere', 'cone', 'torus', 'pyramid'], help='forme procédurale au lieu d\'un fichier')
+    ap.add_argument('--shape', choices=['sphere', 'cone', 'torus', 'pyramid', 'cylinder'], help='forme procédurale au lieu d\'un fichier')
     ap.add_argument('--width', type=int, default=24, help='largeur max du modèle en plots (défaut 24)')
     ap.add_argument('--out', default='kit_out')
     ap.add_argument('--bed', type=float, nargs=2, default=[220, 220], metavar=('X', 'Y'), help='plateau d\'impression en mm')
