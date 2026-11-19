@@ -22,7 +22,7 @@ def test_layout_in_bed_no_overlap():
     plates = P.layout(items, bed)
     assert sum(map(len, plates)) == len(items) and len(plates) > 1
     for p in plates:
-        boxes = [(x, y, x + it[2] * 8, y + it[1] * 8) for it, x, y in p]
+        boxes = [(x, y, x + it.W, y + it.D) for it, x, y in p]
         assert all(b[0] >= 0 and b[1] >= 0 and b[2] <= bed[0] and b[3] <= bed[1] for b in boxes)
         for i, a in enumerate(boxes):
             for b in boxes[i+1:]: assert a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1]

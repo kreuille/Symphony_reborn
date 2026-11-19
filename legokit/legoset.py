@@ -31,6 +31,10 @@ def find_set(cache, query):
     sets = {r['set_num']: r for r in rows(cache, 'sets') if r['set_num'] == q}
     return sets.get(q)
 
+def relations(cache):
+    """{pièce dérivée: pièce de base} : impressions (P), variantes de moule (M), alternatives (A), pièces jumelles (T)."""
+    return {r['child_part_num']: r['parent_part_num'] for r in rows(cache, 'part_relationships') if r['rel_type'] in 'PMAT'}
+
 def classify(name):
     """-> (type, w, d) si pièce simple imprimable par legokit, sinon None."""
     m = SIMPLE.match(name)

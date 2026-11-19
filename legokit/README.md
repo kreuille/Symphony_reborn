@@ -52,25 +52,35 @@ python3 legoset.py 10698 --out set_10698/
 
 Télécharge une fois les CSV publics de Rebrickable (cache `~/.cache/legokit/rebrickable`, ou `--cache`, ou `LEGOKIT_CACHE`),
 puis écrit `pieces_par_couleur.csv` (couleur, code RVB, pièce, quantité, `imprimable` oui/non) et affiche le détail par couleur.
-Sont marquées imprimables les pièces nommées exactement « Brick / Plate / Tile N x M » (jusqu'à 12), que `legokit.brick_mesh` sait générer.
+Sont marquées « imprimable » les pièces nommées exactement « Brick / Plate / Tile N x M » (jusqu'à 12), générées en paramétrique ; `legoprint.py` couvre le reste via LDraw.
 Exemples : set 10698 → 790 pièces, 33 couleurs, 51 % générables ; set 11011 → 1500 pièces, 39 couleurs, 47 %.
-Pas encore fait : STL/3MF par couleur, pièces spéciales (pentes, arches, figurines), sous-ensembles et figurines de l'inventaire.
+Les figurines complètes et sous-ensembles de l'inventaire Rebrickable ne sont pas inclus.
 
 ## Numéro de set → STL et 3MF par couleur (`legoprint.py`)
 
 ```bash
-python3 legoprint.py 10698 --out kit_10698/                 # plateau 256x256 (X1, P1, A1)
-python3 legoprint.py 10698 --bed 180 180 --colors "Red,Black"   # A1 mini, seulement certaines couleurs
+python3 legoprint.py 40468 --out kit_40468/                      # plateau 256x256 (X1, P1, A1)
+python3 legoprint.py 10698 --bed 180 180 --colors "Red,Black"    # A1 mini, seulement certaines couleurs
+python3 legoprint.py 10698 --no-ldraw                            # briques/plaques/tuiles paramétriques seulement (rapide, sans LDraw)
 ```
 
-Pour chaque couleur : `kit_10698/<Couleur>/<Couleur>_NN.3mf` et `.stl`, un fichier par plateau d'impression (pièces rangées dans le plateau,
-marge 5 mm, écart 3 mm, plots vers le haut, sans supports), plus `resume.csv`. Le 3MF contient un objet par type de pièce et la couleur Rebrickable
-(`basematerials`) ; le STL contient le même plateau sans couleur.
-Dimensions : brique 9,6 mm, plaque et tuile 3,2 mm (+ plots 1,8 mm), jeu `--tol` 0,1 mm par côté.
-Exemple : set 10698 → 424 pièces sur 29 plateaux (une trentaine de couleurs), 366 pièces non gérées.
+Couvre **tout le set**, par deux voies :
+- **Briques, plaques, tuiles N x M** (« Brick/Plate/Tile N x M ») : formes paramétriques de `legokit.py`, creuses, tubes et plots calibrés pour l'impression.
+- **Toutes les autres pièces** (pentes, supports, jantes, pneus, fenêtres, minifigs...) : géométrie de la bibliothèque LDraw (`legopart.py`) :
+  faces orientées vers l'extérieur (BFC), conversion LDU → mm, **plots vers le haut** sauf si l'appui est quasi nul (un pneu se couche),
+  retrait de 0,2 mm du pied des pièces qui s'emboîtent. Les références Rebrickable sont reliées aux fichiers LDraw (variantes, impressions).
+  Seuls les autocollants et le papier ne sont pas imprimés ; ils sont listés dans `non_generees.csv` avec la raison.
 
-Les 3MF sont relus et vérifiés par `test_legoprint.py` (XML, dimensions, pièces dans le plateau, sans chevauchement),
-mais pas encore ouverts dans Bambu Studio : la couleur du filament est à choisir dans le trancheur si elle n'est pas reprise.
+Pour chaque couleur : `kit/<Couleur>/<Couleur>_NN.3mf` et `.stl`, un fichier par plateau (marge 5 mm, écart 3 mm), plus `resume.csv`.
+Le 3MF contient un objet par type de pièce et la couleur Rebrickable (`basematerials`) ; le STL contient le même plateau sans couleur.
+La bibliothèque LDraw (~150 Mo) est téléchargée une fois dans le cache (`--ldraw complete.zip` pour en indiquer une locale).
+
+Résultats : 10698 → 790/790 pièces sur 33 plateaux ; 11011 → 1 500/1 500 sur 39 ; 40468 (Yellow Taxi) → 123/124 sur 9 (planche d'autocollants exclue).
+
+**À savoir avant d'imprimer les pièces LDraw :**
+- La géométrie LDraw est fidèle à la forme extérieure, pas optimisée pour l'impression : 3 à 13 % d'arêtes non appariées (jonctions en T) que les trancheurs réparent à l'import, pas de supports ajoutés (pentes inversées, arches, supports : à supporter dans le trancheur).
+- Le jeu d'emboîtement des pièces spéciales est celui de LDraw moins 0,2 mm sur l'emprise ; à calibrer sur un premier essai (même démarche que la 2x4).
+- Les pneus sont en caoutchouc : les imprimer en TPU, ou accepter une pièce rigide. Les 3MF et STL n'ont pas été ouverts dans Bambu Studio.
 
 ## Notice de montage LDraw (`legonotice.py`)
 

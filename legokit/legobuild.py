@@ -169,8 +169,8 @@ def main():
         import legoprint as P
         rows = [dict(couleur=c, rgb=next(r['rgb'] for r in inv if r['couleur'] == c), quantite=n, imprimable='oui', type='Brick', plots=z)
                 for (c, p, z), n in used.items()]
-        _, np_ = P.print_kit(rows, f'{out}/kit', tuple(a.bed), a.tol, quiet=True)
-        print(f'  kit à imprimer : {np_} plateaux -> {out}/kit/')
+        res = P.print_kit(rows, f'{out}/kit', tuple(a.bed), a.tol, quiet=True)
+        print(f"  kit à imprimer : {res['plates']} plateaux -> {out}/kit/")
     if not a.no_notice:
         text = open(f'{out}/modele.ldr', encoding='utf-8').read()
         models, first, custom = N.parse_model(text)
