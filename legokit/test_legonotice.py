@@ -46,6 +46,8 @@ def test_library_and_build():
         data = json.loads(re.search(r'const D = (\{.*?\});\n', html, re.S).group(1))
         assert len(data['steps']) == 3 and data['steps'][2][0][4] == 1      # Brick 2 x 4 : imprimable
         assert data['radius'] > 0 and 'Test &lt;x>' in html
+        assert len(data['fit']) == 3 and data['title'] == 'Test <x>'        # cadrage cumulatif pour le mode PDF
+        assert data['fit'][0][3] <= data['fit'][2][3] and 'printroot' in html
 
 
 def test_embedded_part():

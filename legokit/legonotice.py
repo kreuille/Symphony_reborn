@@ -8,7 +8,7 @@ Pièces repérées « imprimable » : celles que legoprint.py sait générer (Br
 Usage : python3 legonotice.py --set 1069-1 --out notice.html
         python3 legonotice.py --model mon_modele.mpd --ldraw complete.zip --out notice.html
 """
-import argparse, base64, concurrent.futures as cf, gzip, json, math, os, re, sys, urllib.request, zipfile
+import argparse, base64, concurrent.futures as cf, glob, gzip, json, math, os, re, shutil, subprocess, sys, urllib.request, zipfile
 import numpy as np
 import legoset as S
 
@@ -166,7 +166,7 @@ def expand(models, name, M, col, steps, depth=0):
     if cur: steps.append(cur)
 
 # ---------------------------------------------------------------- export
-def build(models, first, lib):
+def build(models, first, lib, title=''):
     steps = []
     expand(models, first, np.eye(4), 15, steps)
     refs = sorted({p[0] for s in steps for p in s})
@@ -185,7 +185,7 @@ def build(models, first, lib):
         meta.append({'name': r, 'nv': len(pos), 'nl': len(L) * 2})
         bb[r] = (pos.min(0), pos.max(0)) if len(pos) else (np.zeros(3), np.zeros(3))
     blob = b''.join(tri_b[i] + line_b[i] + col_b[i] for i in range(len(refs)))
-    inst, lo, hi, st = [], np.full(3, 1e9), np.full(3, -1e9), []
+    inst, lo, hi, st, fit = [], np.full(3, 1e9), np.full(3, -1e9), [], []
     for si, parts in enumerate(steps):
         agg = {}
         for ref, M, c in parts:
@@ -201,9 +201,11 @@ def build(models, first, lib):
             nm = lib.name(ref); rgb, a = lib.color(c)
             rows.append([ref[:-4] if ref.endswith('.dat') else ref, nm, [round(x, 3) for x in rgb], q, 1 if S.classify(nm) else 0])
         st.append(rows)
+        c0 = (lo + hi) / 2 if len(inst) else np.zeros(3)
+        fit.append([*c0.round(2).tolist(), round(float(np.linalg.norm(hi - lo) / 2), 2) if len(inst) else 1])
     if not inst: raise SystemExit('aucune pièce trouvée (bibliothèque LDraw incomplète ?)')
     c = (lo + hi) / 2
-    return {'meshes': meta, 'inst': inst, 'steps': st, 'center': c.round(2).tolist(),
+    return {'title': title, 'fit': fit, 'meshes': meta, 'inst': inst, 'steps': st, 'center': c.round(2).tolist(),
             'radius': round(float(np.linalg.norm(hi - lo) / 2), 2),
             'blob': base64.b64encode(gzip.compress(blob, 6)).decode()}, len(steps), len(inst)
 
@@ -222,11 +224,18 @@ HTML = r'''<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="view
  .sw{width:18px;height:18px;border-radius:4px;border:1px solid #0004;flex:none} .q{font-weight:700;min-width:28px}
  .tag{font-size:11px;background:#e6f4ea;color:#1b6b2e;border-radius:4px;padding:1px 5px;margin-left:auto;white-space:nowrap}
  label{font-size:13px;white-space:nowrap}
+ #printroot{display:none;background:#fff}
+ body.print #app{display:none} body.print #printroot{display:block}
+ .blk{display:grid;grid-template-columns:1fr 58mm;gap:6mm;height:132mm;box-sizing:border-box;padding:3mm 0;border-bottom:.3mm solid #ccc;break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .blk .hd{font-size:11pt;margin-bottom:2mm}.blk img{width:100%;max-height:112mm;object-fit:contain;border:.3mm solid #ddd;background:#f4f4f2}
+ .blk .pl{overflow:hidden}.blk .p{font-size:8.5pt;padding:1.2mm 0}.blk .sw{width:4mm;height:4mm}
+ @page{size:A4;margin:10mm}
+ @media print{#app{display:none!important}#printroot{display:block}html,body{background:#fff;height:auto}}
  @media (max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:auto 1fr 200px}header{grid-column:1}aside{border-left:0;border-top:1px solid #ddd}}
 </style>
 <div id="app"><header><h1>__TITLE__</h1><button id="prev">◀</button><input id="sl" type="range" min="1" value="1"><button id="next">▶</button>
- <b id="lab"></b><label><input id="dim" type="checkbox" checked> atténuer les étapes précédentes</label></header>
- <canvas id="c"></canvas><aside><h2>Pièces de cette étape</h2><div id="parts"></div></aside></div>
+ <b id="lab"></b><button id="pdf" title="Ouvre l'impression du navigateur : choisissez « Enregistrer au format PDF »">PDF</button><label><input id="dim" type="checkbox" checked> atténuer les précédentes</label><label><input id="fit" type="checkbox"> cadrage auto</label></header>
+ <canvas id="c"></canvas><aside><h2>Pièces de cette étape</h2><div id="parts"></div></aside></div><div id="printroot"></div>
 <script>
 const D = __DATA__;
 async function inflate(b64){const bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
@@ -263,11 +272,11 @@ for(const m of D.meshes){
 const I=D.inst.map(r=>({m:r[0],s:r[1],c:[r[2],r[3],r[4],r[5]],M:new Float32Array([r[6],r[7],r[8],0,r[9],r[10],r[11],0,r[12],r[13],r[14],0,r[15],r[16],r[17],1])}));
 const N=D.steps.length;let step=N-1,yaw=-0.6,pitch=0.55,zoom=1,dirty=true;
 const sl=document.getElementById('sl');sl.max=N;
-function ui(){sl.value=step+1;document.getElementById('lab').textContent=`Étape ${step+1} / ${N}`;
- document.getElementById('parts').innerHTML=D.steps[step].map(p=>`<div class="p"><span class="sw" style="background:rgb(${p[2].map(x=>Math.round(x*255))})"></span><span class="q">${p[3]}×</span><span>${p[0]}<br><small>${p[1]}</small></span>${p[4]?'<span class="tag">imprimable</span>':''}</div>`).join('');dirty=true}
-function draw(){dirty=false;const dpr=devicePixelRatio||1,w=cv.clientWidth*dpr|0,h=cv.clientHeight*dpr|0;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+const partsHtml=s=>D.steps[s].map(p=>`<div class="p"><span class="sw" style="background:rgb(${p[2].map(x=>Math.round(x*255))})"></span><span class="q">${p[3]}×</span><span>${p[0]}<br><small>${p[1]}</small></span>${p[4]?'<span class="tag">imprimable</span>':''}</div>`).join('');
+function ui(){sl.value=step+1;document.getElementById('lab').textContent=`Étape ${step+1} / ${N}`;document.getElementById('parts').innerHTML=partsHtml(step);dirty=true}
+function draw(W,H,pr){dirty=false;const dpr=devicePixelRatio||1,w=W||cv.clientWidth*dpr|0,h=H||cv.clientHeight*dpr|0;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
  gl.viewport(0,0,w,h);gl.clearColor(.957,.957,.949,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);
- const R=D.radius,c=D.center,asp=w/h,hh=R*1.15/zoom;
+ const F=(pr||document.getElementById('fit').checked)?D.fit[step]:null,R=F?F[3]:D.radius,c=F?F:D.center,asp=w/h,hh=R*1.15/(pr?1:zoom);
  const V=mul(mul(rotX(pitch),rotY(yaw)),mul(scl(1,-1,1),trans(-c[0],-c[1],-c[2]))),Pm=ortho(hh*asp,hh,R*3);
  const dim=document.getElementById('dim').checked;
  gl.useProgram(P1);gl.uniformMatrix4fv(U(P1,'uV'),false,V);gl.uniformMatrix4fv(U(P1,'uP'),false,Pm);
@@ -281,20 +290,25 @@ function draw(){dirty=false;const dpr=devicePixelRatio||1,w=cv.clientWidth*dpr|0
   gl.uniform4f(U(P2,'uC'),0,0,0,dim&&i.s<step?.25:.8);gl.drawArrays(gl.LINES,0,m.nl)}}
 const go=s=>{step=Math.max(0,Math.min(N-1,s));ui()};
 document.getElementById('prev').onclick=()=>go(step-1);document.getElementById('next').onclick=()=>go(step+1);sl.oninput=()=>go(sl.value-1);
-document.getElementById('dim').onchange=()=>dirty=true;
+document.getElementById('dim').onchange=document.getElementById('fit').onchange=()=>dirty=true;
+function buildPrint(){const keep=step;let h='';for(let s=0;s<N;s++){step=s;draw(900,675,true);
+ h+=`<section class="blk"><div><div class="hd"><b>${D.title}</b> — étape ${s+1} / ${N}</div><img src="${cv.toDataURL('image/jpeg',.8)}"></div><div class="pl">${partsHtml(s)}</div></section>`}
+ document.getElementById('printroot').innerHTML=h;step=keep;ui();window.__printReady=true}
+document.getElementById('pdf').onclick=()=>{buildPrint();window.print()};
+if(location.hash==='#print'){document.body.classList.add('print');buildPrint()}
 addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(step+1);if(e.key==='ArrowLeft')go(step-1)});
 let drag=null;cv.onpointerdown=e=>{drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId)};cv.onpointerup=()=>drag=null;
 cv.onpointermove=e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*.008;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];dirty=true};
 cv.onwheel=e=>{e.preventDefault();zoom=Math.max(.3,Math.min(6,zoom*(e.deltaY<0?1.1:.91)));dirty=true};
 addEventListener('resize',()=>dirty=true);
 (function loop(){if(dirty)draw();requestAnimationFrame(loop)})();
-window.__ready=true;ui();
+ui();window.__ready=true;
 })().catch(e=>{document.body.insertAdjacentHTML('afterbegin','<pre style="color:#b00;padding:12px">'+e+'</pre>')});
 </script></html>'''
 
 def write_notice(path, models, first, lib, title, custom=()):
     for n, L in dict(custom).items(): lib.add_custom(n, L)
-    data, nsteps, ninst = build(models, first, lib)
+    data, nsteps, ninst = build(models, first, lib, title)
     html = HTML.replace('__TITLE__', title.replace('<', '&lt;')).replace('__DATA__', json.dumps(data, separators=(',', ':')))
     open(path, 'w', encoding='utf-8').write(html)
     return nsteps, ninst, len(data['meshes']), os.path.getsize(path)
@@ -306,6 +320,27 @@ def get_library(arg, cache):
         fetch(LIB_URL, path)
     return Library(path)
 
+def find_chrome():
+    cands = [os.environ.get('CHROME')] + [shutil.which(n) for n in ('google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'chrome', 'msedge')]
+    cands += ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
+              r'C:\Program Files\Google\Chrome\Application\chrome.exe', r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+              r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe', '/opt/pw-browsers/chromium']
+    cands += glob.glob('/opt/pw-browsers/chromium-*/chrome-linux*/chrome')
+    return next((c for c in cands if c and os.path.isfile(c)), None)
+
+def export_pdf(html_path, pdf_path):
+    """PDF via Chrome/Chromium sans interface : la page dessine chaque étape (WebGL) puis le navigateur l'imprime."""
+    chrome = find_chrome()
+    if not chrome:
+        raise SystemExit('Chrome/Chromium introuvable (variable CHROME pour l\'indiquer). Sinon ouvrez ' + html_path + ' et cliquez sur « PDF ».')
+    url = 'file://' + os.path.abspath(html_path).replace(os.sep, '/') + '#print'
+    cmd = [chrome, '--headless=new', '--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
+           '--ignore-gpu-blocklist', '--no-pdf-header-footer', '--virtual-time-budget=300000', '--run-all-compositor-stages-before-draw',
+           '--print-to-pdf=' + os.path.abspath(pdf_path), url]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+    if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) < 1000:
+        raise SystemExit('échec de l\'export PDF :\n' + r.stderr[-600:])
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     g = ap.add_mutually_exclusive_group(required=True)
@@ -313,6 +348,7 @@ def main():
     g.add_argument('--model', help='fichier .mpd ou .ldr')
     ap.add_argument('--ldraw', help='complete.zip ou dossier ldraw/ local (sinon téléchargé dans le cache)')
     ap.add_argument('--cache'); ap.add_argument('--out', default='notice.html'); ap.add_argument('--title')
+    ap.add_argument('--pdf', metavar='FICHIER.pdf', help='exporte aussi un PDF A4 (2 étapes par page) via Chrome/Chromium')
     a = ap.parse_args()
     cache = S.cache_dir(a.cache)
     text = omr_model(cache, a.set) if a.set else open(a.model, encoding='utf-8', errors='ignore').read()
@@ -321,6 +357,9 @@ def main():
     title = a.title or (a.set or os.path.splitext(os.path.basename(a.model))[0])
     ns, ni, nm, size = write_notice(a.out, models, first, lib, title, custom)
     print(f'{a.out} : {ns} étapes, {ni} pièces posées, {nm} formes distinctes, {size // 1024} Ko')
+    if a.pdf:
+        if ns > 300: print(f'attention : {ns} étapes, le PDF sera volumineux et long à produire', file=sys.stderr)
+        export_pdf(a.out, a.pdf); print(f'{a.pdf} : {os.path.getsize(a.pdf) // 1024} Ko')
 
 if __name__ == '__main__':
     main()

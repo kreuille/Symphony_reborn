@@ -91,4 +91,15 @@ précédentes atténuées (case à décocher). Les pièces que `legoprint.py` sa
 - **Tous les sets n'ont pas de modèle LDraw :** 10698 et 11011 (utilisés plus haut) n'y sont pas, `--set` le dit ; il faut alors un fichier `--model`
   (créé avec LDraw/Bricklink Studio exporté en .ldr, ou trouvé en ligne). Les fichiers `.io` de Studio ne sont pas lus.
 - **Vérifié :** tests hors ligne (`test_legonotice.py`) et rendu contrôlé dans Chromium sur trois modèles OMR, de 28 à 2 320 pièces.
-  Limites : pas de multiplicateur « ×4 » pour un sous-assemblage répété (il est répété étape par étape), pas de pièces en rotation animée, pas d'export PDF.
+  Limites : pas de multiplicateur « ×4 » pour un sous-assemblage répété (il est répété étape par étape), pas de pièces en rotation animée.
+
+### Export PDF
+
+```bash
+python3 legonotice.py --model mon_modele.mpd --out notice.html --pdf notice.pdf
+```
+
+PDF A4, **2 étapes par page** : image de l'étape (caméra recadrée sur ce qui est déjà monté, pièces nouvelles en couleur) et liste des pièces avec le tag « imprimable ».
+`--pdf` pilote Chrome, Chromium ou Edge sans interface (variable `CHROME` pour indiquer le binaire). Sans navigateur en ligne de commande :
+ouvrez `notice.html` et cliquez sur **PDF** (impression du navigateur, « Enregistrer au format PDF »). Exemple : 16 étapes → 8 pages, 0,7 Mo.
+Au-delà de ~300 étapes (gros modèles), le PDF devient lourd et lent à produire : un avertissement s'affiche.
