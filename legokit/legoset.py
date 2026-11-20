@@ -47,10 +47,11 @@ def inventory(cache, set_num, spares=False):
     if not inv: raise SystemExit(f'pas d\'inventaire pour {set_num}')
     inv_id = max(inv, key=lambda r: int(r['version']))['id']
     colors = {r['id']: r for r in rows(cache, 'colors')}
-    agg = defaultdict(int)
+    agg, imgs = defaultdict(int), {}
     for r in rows(cache, 'inventory_parts'):
         if r['inventory_id'] != inv_id or (r['is_spare'] == 'True' and not spares): continue
         agg[(r['color_id'], r['part_num'])] += int(r['quantity'])
+        imgs.setdefault((r['color_id'], r['part_num']), r.get('img_url', ''))
     need = {p for _, p in agg}
     names = {r['part_num']: r['name'] for r in rows(cache, 'parts') if r['part_num'] in need}
     out = []
@@ -58,7 +59,7 @@ def inventory(cache, set_num, spares=False):
         c = colors.get(cid, {'name': f'#{cid}', 'rgb': '808080', 'is_trans': 'False'})
         nm = names.get(pn, '?'); cl = classify(nm)
         out.append(dict(couleur=c['name'], color_id=int(cid) if cid.lstrip('-').isdigit() else -1, rgb=c['rgb'], transparent=c['is_trans'] == 'True', part_num=pn, nom=nm,
-                        quantite=q, imprimable='oui' if cl else 'non',
+                        quantite=q, img=imgs.get((cid, pn), ''), imprimable='oui' if cl else 'non',
                         type=cl[0] if cl else '', plots=f'{cl[1]}x{cl[2]}' if cl else ''))
     out.sort(key=lambda r: (r['couleur'], -r['quantite'], r['part_num']))
     return out

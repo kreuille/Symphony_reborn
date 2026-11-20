@@ -118,6 +118,58 @@ def csv_rows(path, rows):
     with open(path, 'w', newline='', encoding='utf-8') as f:
         w = csv.writer(f); w.writerow(['couleur', 'piece', 'plots', 'quantite']); w.writerows(rows)
 
+def build(set_num, out, shape='sphere', model=None, width=40, colors=None, max_colors=8, trans=False, ldraw=None,
+          cache=None, bed=(256, 256), tol=0.1, notice=True, kit=True, pdf=False, log=print):
+    """Construit un modèle avec l'inventaire du set. -> dict(title, bricks, available, colors, rows, dropped, plates, files)."""
+    cache = S.cache_dir(cache); s = S.find_set(cache, set_num)
+    if not s: raise SystemExit(f'set {set_num} introuvable')
+    inv = S.inventory(cache, s['set_num'])
+    want = {c.strip().lower() for c in colors.split(',')} if colors else top_colors(inv, max_colors, trans)
+    sup = supply_from(inv, want)
+    cells = sum(x * y * sum(q.values()) for (x, y), q in sup.items())
+    if not cells: raise SystemExit('aucune brique utilisable dans cet inventaire')
+    mesh = K.read_mesh(model) if model else None
+    best = None
+    for W in range(width, 3, -1):
+        vox = K.voxelize_mesh(mesh, W) if mesh is not None else K.shape_voxels(shape, W)
+        if vox.sum() > cells: continue
+        layers, miss = plan(vox, sup)
+        if miss: continue
+        layers, dropped = K.prune_floating(layers)
+        if dropped > 0.1 * sum(map(len, layers)) + 2: continue
+        best = (W, vox, layers, dropped); break
+    if not best: raise SystemExit('aucune taille réalisable avec cet inventaire')
+    W, vox, layers, dropped = best
+    colored, rem = assign_colors(layers, sup, vox.shape[2])
+    os.makedirs(out, exist_ok=True)
+    lib = None
+    if notice:
+        import legonotice as N
+        log('bibliothèque LDraw ...'); lib = N.get_library(ldraw, cache)
+    title = f"{s['set_num']} {s['name']} - {model and os.path.basename(model) or shape} {vox.shape[0]}x{vox.shape[1]}x{vox.shape[2]}"
+    write_ldr(f'{out}/modele.ldr', colored, vox.shape[0], vox.shape[1], lib, title)
+    used = Counter((key[0], key[3], f'{min(w, d)}x{max(w, d)}') for row in colored for (_, _, _, w, d, key) in row)
+    csv_rows(f'{out}/pieces_utilisees.csv', sorted((c, p, z, n) for (c, p, z), n in used.items()))
+    csv_rows(f'{out}/pieces_restantes.csv', sorted((k[0], k[3], f'{x}x{y}', n) for (x, y), q in rem.items() for k, n in q.items() if n > 0))
+    nb = sum(used.values()); avail = sum(sum(q.values()) for q in sup.values())
+    log(f"{title}: {nb} briques sur {avail} disponibles, {len({c for c, _, _ in used})} couleurs, {vox.shape[2]} rangées"
+        + (f', {dropped} brique(s) flottante(s) retirée(s)' if dropped else ''))
+    plates = 0
+    if kit:
+        import legoprint as P
+        rows = [dict(couleur=c, rgb=next(r['rgb'] for r in inv if r['couleur'] == c), quantite=n, imprimable='oui', type='Brick', plots=z)
+                for (c, p, z), n in used.items()]
+        plates = P.print_kit(rows, f'{out}/kit', tuple(bed), tol, quiet=True)['plates']
+        log(f'kit à imprimer : {plates} plateaux')
+    if notice:
+        text = open(f'{out}/modele.ldr', encoding='utf-8').read()
+        models, first, custom = N.parse_model(text)
+        ns, ni, nm, size = N.write_notice(f'{out}/notice.html', models, first, lib, title, custom)
+        log(f'notice : {ns} étapes')
+        if pdf: N.export_pdf(f'{out}/notice.html', f'{out}/notice.pdf'); log('PDF écrit')
+    return dict(title=title, bricks=nb, available=avail, colors=len({c for c, _, _ in used}), layers=int(vox.shape[2]),
+                dropped=dropped, plates=plates, used=[dict(couleur=c, piece=p, plots=z, quantite=n) for (c, p, z), n in sorted(used.items())])
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('set'); ap.add_argument('--out'); ap.add_argument('--cache')
@@ -132,51 +184,10 @@ def main():
     ap.add_argument('--no-notice', action='store_true'); ap.add_argument('--no-print', action='store_true')
     ap.add_argument('--pdf', action='store_true', help='exporte aussi notice.pdf (Chrome/Chromium)')
     a = ap.parse_args()
-    cache = S.cache_dir(a.cache); s = S.find_set(cache, a.set)
-    if not s: raise SystemExit(f'set {a.set} introuvable')
-    inv = S.inventory(cache, s['set_num'])
-    want = {c.strip().lower() for c in a.colors.split(',')} if a.colors else top_colors(inv, a.max_colors, a.trans)
-    sup = supply_from(inv, want)
-    cells = sum(x * y * sum(q.values()) for (x, y), q in sup.items())
-    if not cells: raise SystemExit('aucune brique utilisable dans cet inventaire')
-    mesh = K.read_mesh(a.model) if a.model else None
-    best = None
-    for W in range(a.width, 3, -1):
-        vox = K.voxelize_mesh(mesh, W) if mesh is not None else K.shape_voxels(a.shape, W)
-        if vox.sum() > cells: continue
-        layers, miss = plan(vox, sup)
-        if miss: continue
-        layers, dropped = K.prune_floating(layers)
-        if dropped > 0.1 * sum(map(len, layers)) + 2: continue
-        best = (W, vox, layers, dropped); break
-    if not best: raise SystemExit('aucune taille réalisable avec cet inventaire')
-    W, vox, layers, dropped = best
-    colored, rem = assign_colors(layers, sup, vox.shape[2])
-    out = a.out or 'build_' + s['set_num']; os.makedirs(out, exist_ok=True)
-    lib = None
-    if not a.no_notice:
-        import legonotice as N
-        lib = N.get_library(a.ldraw, cache)
-    title = f"{s['set_num']} {s['name']} - {a.model and os.path.basename(a.model) or a.shape} {vox.shape[0]}x{vox.shape[1]}x{vox.shape[2]}"
-    write_ldr(f'{out}/modele.ldr', colored, vox.shape[0], vox.shape[1], lib, title)
-    used = Counter((key[0], key[3], f'{min(w, d)}x{max(w, d)}') for row in colored for (_, _, _, w, d, key) in row)
-    csv_rows(f'{out}/pieces_utilisees.csv', sorted((c, p, z, n) for (c, p, z), n in used.items()))
-    csv_rows(f'{out}/pieces_restantes.csv', sorted((k[0], k[3], f'{x}x{y}', n) for (x, y), q in rem.items() for k, n in q.items() if n > 0))
-    nb = sum(used.values())
-    print(f"{title}\n  {nb} briques sur {sum(sum(q.values()) for q in sup.values())} disponibles, "
-          f"{len({c for c, _, _ in used})} couleurs, {vox.shape[2]} rangées" + (f', {dropped} brique(s) flottante(s) retirée(s)' if dropped else ''))
-    if not a.no_print:
-        import legoprint as P
-        rows = [dict(couleur=c, rgb=next(r['rgb'] for r in inv if r['couleur'] == c), quantite=n, imprimable='oui', type='Brick', plots=z)
-                for (c, p, z), n in used.items()]
-        res = P.print_kit(rows, f'{out}/kit', tuple(a.bed), a.tol, quiet=True)
-        print(f"  kit à imprimer : {res['plates']} plateaux -> {out}/kit/")
-    if not a.no_notice:
-        text = open(f'{out}/modele.ldr', encoding='utf-8').read()
-        models, first, custom = N.parse_model(text)
-        ns, ni, nm, size = N.write_notice(f'{out}/notice.html', models, first, lib, title, custom)
-        print(f'  notice : {ns} étapes -> {out}/notice.html')
-        if a.pdf: N.export_pdf(f'{out}/notice.html', f'{out}/notice.pdf'); print(f'  PDF -> {out}/notice.pdf')
+    out = a.out or 'build_' + (a.set if '-' in a.set else a.set + '-1')
+    r = build(a.set, out, a.shape, a.model, a.width, a.colors, a.max_colors, a.trans, a.ldraw, a.cache, tuple(a.bed), a.tol,
+              not a.no_notice, not a.no_print, a.pdf)
+    print(f"-> {out}/ ({r['bricks']} briques)")
 
 if __name__ == '__main__':
     main()

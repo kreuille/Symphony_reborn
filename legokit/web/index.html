@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LegoKit — kit LEGO imprimable</title>
+<style>
+:root{--bg:#f6f6f3;--card:#fff;--ink:#1d1d1b;--mute:#6b6b66;--line:#e2e2dc;--acc:#c8102e;--accink:#fff;--ok:#1b7a3a;--warn:#9a5b00;--chip:#efefe9}
+@media (prefers-color-scheme:dark){:root{--bg:#151514;--card:#1e1e1c;--ink:#eeeeea;--mute:#a3a39c;--line:#34342f;--acc:#ff5468;--accink:#1a0508;--ok:#5bd17f;--warn:#f0b04a;--chip:#2a2a27}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 48px}
+header{padding:22px 0 8px}
+h1{font-size:22px;margin:0 0 2px;letter-spacing:-.01em}
+.sub{color:var(--mute);margin:0}
+nav{display:flex;gap:4px;margin:18px 0 14px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{font:inherit;background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;cursor:pointer;color:var(--mute);white-space:nowrap}
+nav button[aria-selected=true]{color:var(--ink);border-color:var(--acc);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+form{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute)}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input[type=number]{width:90px}.set{width:150px}
+button.go{font:inherit;font-weight:600;background:var(--acc);color:var(--accink);border:0;border-radius:8px;padding:10px 18px;cursor:pointer}
+button.go:disabled{opacity:.5;cursor:wait}
+a.btn,button.sec{font:inherit;display:inline-block;background:var(--chip);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 12px;text-decoration:none;cursor:pointer}
+a.btn:hover,button.sec:hover{border-color:var(--mute)}
+.hint{font-size:12.5px;color:var(--mute);margin:8px 0 0}
+pre.log{background:var(--chip);border-radius:8px;padding:10px;font:12.5px/1.4 ui-monospace,monospace;white-space:pre-wrap;margin:12px 0 0;max-height:150px;overflow:auto}
+.err{color:#fff;background:#b3261e;border-radius:8px;padding:10px 12px;margin-top:12px}
+.head{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.head img{width:150px;height:110px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid var(--line)}
+.head h2{margin:0;font-size:19px}
+.bar{height:10px;border-radius:5px;background:var(--chip);overflow:hidden;display:flex;margin:10px 0 4px;min-width:260px}
+.bar i{display:block;height:100%}.b1{background:var(--ok)}.b2{background:#3a7bd5}
+.legend{font-size:13px;color:var(--mute)}.legend b{color:var(--ink)}
+.plates{display:grid;grid-template-columns:230px 1fr;gap:14px}
+@media (max-width:760px){.plates{grid-template-columns:1fr}}
+.chips{display:flex;flex-direction:column;gap:6px;max-height:520px;overflow:auto}
+.chip{display:flex;align-items:center;gap:8px;text-align:left;font:inherit;color:var(--ink);background:var(--chip);border:1px solid var(--line);border-radius:8px;padding:7px 9px;cursor:pointer}
+.chip[aria-pressed=true]{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.sw{width:18px;height:18px;border-radius:4px;border:1px solid #0004;flex:none}
+.chip small{color:var(--mute);margin-left:auto}
+.vwrap{position:relative;background:#efefea;border-radius:10px;border:1px solid var(--line);min-height:440px;overflow:hidden}
+.vwrap canvas{width:100%;height:100%;min-height:440px;display:block;touch-action:none;cursor:grab}
+.vtools{position:absolute;left:10px;bottom:10px;right:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.vtitle{position:absolute;left:12px;top:10px;font-weight:600;color:#222;text-shadow:0 0 6px #efefea}
+.tablewrap{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{position:sticky;top:0;background:var(--card)}
+td img{width:44px;height:34px;object-fit:contain;background:#fff;border-radius:4px;display:block}
+.tag{font-size:11.5px;border-radius:5px;padding:1px 6px;background:var(--chip);color:var(--mute);white-space:nowrap}
+.tag.p{color:var(--ok)}.tag.l{color:#3a7bd5}.tag.n{color:var(--warn)}
+iframe{width:100%;height:640px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+h3{margin:18px 0 8px;font-size:16px}
+[hidden]{display:none!important}
+</style>
+<body><div class="wrap">
+<header><h1>LegoKit</h1><p class="sub">Numéro de set → plateaux d'impression 3D par couleur, modèle et notice de montage.</p></header>
+<nav role="tablist">
+ <button role="tab" aria-selected="true" data-tab="kit">Kit à imprimer</button>
+ <button role="tab" aria-selected="false" data-tab="build">Modèle avec les pièces du set</button>
+ <button role="tab" aria-selected="false" data-tab="notice">Notice de montage</button>
+</nav>
+
+<section id="kit">
+ <div class="card"><form id="f-kit">
+  <label>Numéro de set<input class="set" name="set" placeholder="40468" required pattern="\d{1,8}(-\d{1,3})?" inputmode="numeric"></label>
+  <label>Imprimante<select name="bed"><option value="256,256">Bambu X1 / P1 / A1 (256 mm)</option><option value="180,180">Bambu A1 mini (180 mm)</option><option value="220,220">Ender / Prusa MK (220 mm)</option><option value="350,320">Bambu H2D (350 × 320)</option></select></label>
+  <label>Jeu par côté (mm)<input type="number" name="tol" value="0.1" min="0" max="0.5" step="0.05"></label>
+  <button class="go">Générer le kit</button>
+ </form>
+ <p class="hint">Briques, plaques et tuiles sont générées sur mesure ; les autres pièces (pentes, supports, roues…) viennent de la bibliothèque LDraw. La première fois, le téléchargement des données (~165 Mo) peut prendre quelques minutes.</p>
+ <pre class="log" hidden></pre></div>
+ <div class="out"></div>
+</section>
+
+<section id="build" hidden>
+ <div class="card"><form id="f-build">
+  <label>Numéro de set<input class="set" name="set" placeholder="10698" required pattern="\d{1,8}(-\d{1,3})?" inputmode="numeric"></label>
+  <label>Forme<select name="shape"><option value="sphere">Sphère</option><option value="cylinder">Cylindre</option><option value="cone">Cône</option><option value="pyramid">Pyramide</option><option value="torus">Tore</option></select></label>
+  <label>Couleurs max<input type="number" name="max_colors" value="8" min="0" max="60"></label>
+  <label>Imprimante<select name="bed"><option value="256,256">256 mm</option><option value="180,180">180 mm</option><option value="220,220">220 mm</option></select></label>
+  <button class="go">Construire</button>
+ </form>
+ <p class="hint">Construit la plus grande forme possible avec les seules briques et couleurs du set. Idéal pour les boîtes de briques en vrac. 0 couleur = toutes.</p>
+ <pre class="log" hidden></pre></div>
+ <div class="out"></div>
+</section>
+
+<section id="notice" hidden>
+ <div class="card"><form id="f-notice">
+  <label>Set du dépôt officiel LDraw<input class="set" name="set" placeholder="1069-1" pattern="\d{1,8}(-\d{1,3})?"></label>
+  <button class="go" name="go-set">Chercher et générer</button>
+  <label>…ou votre fichier (.ldr / .mpd)<input type="file" name="file" accept=".ldr,.mpd"></label>
+  <button class="go" name="go-file" type="button">Envoyer</button>
+ </form>
+ <p class="hint">Les modèles officiels couvrent environ 1 470 sets. Pour les autres, envoyez un fichier LDraw (export LDraw ou BrickLink Studio).</p>
+ <pre class="log" hidden></pre></div>
+ <div class="out"></div>
+</section>
+</div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const hex=a=>'#'+a.map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');
+
+$$('nav button').forEach(b=>b.onclick=()=>{$$('nav button').forEach(x=>x.setAttribute('aria-selected',x===b));$$('main,section').forEach(s=>s.hidden=s.id!==b.dataset.tab)});
+
+async function runJob(start,logEl){
+  logEl.hidden=false;logEl.textContent='démarrage…';
+  const r=await start; const j=await r.json(); if(!r.ok) throw new Error(j.error||'erreur');
+  for(;;){await sleep(700);const s=await (await fetch('/api/job/'+j.job)).json();
+    logEl.textContent=s.log.join('\n')||'en cours…';
+    if(s.status==='done') return {id:j.job,res:s.result};
+    if(s.status==='error') throw new Error(s.error);}
+}
+function post(url,body){return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})}
+function formData(f){const d=Object.fromEntries(new FormData(f));if(d.bed)d.bed=d.bed.split(',').map(Number);return d}
+function wire(sel,startFn){
+  const sec=$(sel),f=$('form',sec),out=$('.out',sec),log=$('.log',sec);
+  f.onsubmit=async e=>{e.preventDefault();await go(()=>startFn(f))};
+  async function go(fn){
+    const btns=$$('.go',f);btns.forEach(b=>b.disabled=true);out.innerHTML='';
+    try{const {id,res}=await fn();log.hidden=true;render(out,id,res)}
+    catch(err){out.innerHTML=`<div class="err">${esc(err.message)}</div>`}
+    finally{btns.forEach(b=>b.disabled=false)}
+  }
+  return go;
+}
+wire('#kit',f=>runJob(post('/api/kit',formData(f)),$('#kit .log')));
+wire('#build',f=>runJob(post('/api/build',formData(f)),$('#build .log')));
+const goNotice=wire('#notice',f=>runJob(post('/api/notice',{set:new FormData(f).get('set')}),$('#notice .log')));
+$('#f-notice [name=go-file]').onclick=()=>{const f=$('#f-notice'),file=f.file.files[0];if(!file)return alert('Choisissez un fichier .ldr ou .mpd');
+  goNotice(()=>runJob(fetch('/api/notice?name='+encodeURIComponent(file.name),{method:'POST',body:file}),$('#notice .log')))};
+
+/* ---------- rendu des résultats ---------- */
+function render(out,id,res){
+  const dl=(p,label)=>`<a class="btn" href="/files/${id}/${p}?dl=1">${label}</a>`;
+  let h='';
+  if(res.kind==='kit'){
+    const c=res.coverage,pc=100*c.param/c.total,lc=100*c.ldraw/c.total,gen=c.param+c.ldraw;
+    h+=`<div class="card head">${res.set.img?`<img src="${esc(res.set.img)}" alt="" referrerpolicy="no-referrer">`:''}<div><h2>${esc(res.set.num)} · ${esc(res.set.name)} (${esc(res.set.year)})</h2>
+      <div class="bar"><i class="b1" style="width:${pc}%"></i><i class="b2" style="width:${lc}%"></i></div>
+      <div class="legend"><b>${gen}</b> pièces sur ${c.total} générées (${Math.round(100*gen/c.total)} %) : ${c.param} sur mesure, ${c.ldraw} depuis LDraw · ${res.plates.length} plateaux</div>
+      <div class="row"><a class="btn" href="/zip/${id}">Tout télécharger (ZIP)</a></div></div></div>`;
+    if(res.skipped.length)h+=`<div class="card"><b>Non imprimées :</b> ${res.skipped.map(s=>`${s.quantite} × ${esc(s.part)} ${esc(s.nom)} <span class="tag n">${esc(s.raison)}</span>`).join(' · ')}</div>`;
+  }else if(res.kind==='build'){
+    h+=`<div class="card"><h2 style="margin:0 0 6px;font-size:19px">${esc(res.title)}</h2>
+      <p class="sub"><b>${res.bricks}</b> briques sur ${res.available} disponibles · ${res.colors} couleurs · ${res.layers} rangées · ${res.plates.length} plateaux${res.dropped?` · ${res.dropped} brique(s) flottante(s) retirée(s)`:''}</p>
+      <div class="row"><a class="btn" href="/zip/${id}">Tout télécharger (ZIP)</a>${dl('build/modele.ldr','Modèle .ldr')}${dl('build/notice.html','Notice .html')}${dl('build/pieces_utilisees.csv','Pièces utilisées')}${dl('build/pieces_restantes.csv','Pièces restantes')}</div></div>
+      <h3>Notice de montage</h3><iframe sandbox="allow-scripts allow-modals" src="/files/${id}/${res.notice}"></iframe>`;
+  }else{
+    h+=`<div class="card"><h2 style="margin:0 0 6px;font-size:19px">${esc(res.title)}</h2><p class="sub">${res.steps} étapes · ${res.pieces} pièces posées</p>
+      <div class="row">${dl(res.notice,'Notice .html')}<a class="btn" href="/files/${id}/${res.notice}" target="_blank">Plein écran</a></div></div>
+      <iframe sandbox="allow-scripts allow-modals" src="/files/${id}/${res.notice}"></iframe>`;
+  }
+  if(res.plates&&res.plates.length){h+=`<h3>Plateaux d'impression</h3><div class="card plates"><div class="chips"></div><div class="vwrap"><canvas></canvas><div class="vtitle"></div><div class="vtools"></div></div></div>`}
+  if(res.parts)h+=`<h3>Pièces du set</h3><div class="card"><div class="row"><select class="f-col"><option value="">Toutes les couleurs</option>${[...new Set(res.parts.map(p=>p.couleur))].map(c=>`<option>${esc(c)}</option>`).join('')}</select><select class="f-src"><option value="">Toutes les sources</option><option>paramétrique</option><option>LDraw</option><option>non imprimée</option></select></div><div class="tablewrap"><table><thead><tr><th></th><th>Couleur</th><th>Réf.</th><th>Nom</th><th>Qté</th><th>Source</th></tr></thead><tbody></tbody></table></div></div>`;
+  out.innerHTML=h;
+  if(res.plates&&res.plates.length)plates(out,id,res);
+  if(res.parts)parts(out,res.parts);
+}
+function parts(out,list){
+  const tb=$('tbody',out),fc=$('.f-col',out),fs=$('.f-src',out);
+  const cls={'paramétrique':'p','LDraw':'l','non imprimée':'n'};
+  const draw=()=>{tb.innerHTML=list.filter(p=>(!fc.value||p.couleur===fc.value)&&(!fs.value||p.source===fs.value)).map(p=>
+    `<tr><td>${p.img?`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(p.img)}" alt="">`:''}</td><td><span class="sw" style="display:inline-block;vertical-align:middle;background:#${esc(p.rgb)}"></span> ${esc(p.couleur)}</td><td>${esc(p.part)}</td><td>${esc(p.nom)}</td><td>${p.quantite}</td><td><span class="tag ${cls[p.source]}">${esc(p.source)}</span></td></tr>`).join('')};
+  fc.onchange=fs.onchange=draw;draw();
+}
+function plates(out,id,res){
+  const chips=$('.chips',out),v=new Viewer($('canvas',out),res.bed),title=$('.vtitle',out),tools=$('.vtools',out);
+  const sel=async(i)=>{const p=res.plates[i];$$('.chip',chips).forEach((c,k)=>c.setAttribute('aria-pressed',k===i));
+    title.textContent=`${p.name} · ${p.pieces} pièce${p.pieces>1?'s':''}`;
+    tools.innerHTML=`<a class="btn" href="/files/${id}/${p.mf3}?dl=1">3MF</a><a class="btn" href="/files/${id}/${p.stl}?dl=1">STL</a><button class="sec" data-v="top">Vue de dessus</button><button class="sec" data-v="3d">Vue 3D</button>`;
+    $$('[data-v]',tools).forEach(b=>b.onclick=()=>v.view(b.dataset.v));
+    await v.load(`/files/${id}/${p.stl}`,p.rgb)};
+  chips.innerHTML=res.plates.map((p,i)=>`<button class="chip" aria-pressed="false"><span class="sw" style="background:${hex(p.rgb)}"></span>${esc(p.name)}<small>${p.pieces}</small></button>`).join('');
+  $$('.chip',chips).forEach((c,i)=>c.onclick=()=>sel(i));
+  const first=res.plates.reduce((a,p,i)=>p.pieces>res.plates[a].pieces?i:a,0);sel(first);
+}
+
+/* ---------- visualiseur WebGL de plateau ---------- */
+const mul=(a,b)=>{const o=new Float32Array(16);for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];o[i*4+j]=s}return o};
+const rotX=a=>{const c=Math.cos(a),s=Math.sin(a);return new Float32Array([1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1])};
+const rotZ=a=>{const c=Math.cos(a),s=Math.sin(a);return new Float32Array([c,s,0,0,-s,c,0,0,0,0,1,0,0,0,0,1])};
+const trans=(x,y,z)=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,x,y,z,1]);
+const ortho=(w,h,f)=>new Float32Array([1/w,0,0,0,0,1/h,0,0,0,0,-1/f,0,0,0,0,1]);
+class Viewer{
+  constructor(cv,bed){this.cv=cv;this.bed=bed;this.az=-28;this.el=38;this.zoom=1;this.rgb=[.8,.8,.8];this.n=0;this.fit=60;this.c=[0,0];
+    const gl=this.gl=cv.getContext('webgl2',{antialias:true});if(!gl){cv.replaceWith('WebGL2 requis');return}
+    const sh=(t,s)=>{const h=gl.createShader(t);gl.shaderSource(h,s);gl.compileShader(h);return h};
+    const P=this.P=gl.createProgram();
+    gl.attachShader(P,sh(gl.VERTEX_SHADER,`#version 300 es
+in vec3 aPos;uniform mat4 uV,uP;out vec3 vPos;void main(){vec4 p=uV*vec4(aPos,1.);vPos=p.xyz;gl_Position=uP*p;}`));
+    gl.attachShader(P,sh(gl.FRAGMENT_SHADER,`#version 300 es
+precision highp float;in vec3 vPos;uniform vec3 uC;uniform float uF;out vec4 o;
+void main(){vec3 n=normalize(cross(dFdx(vPos),dFdy(vPos)));float l=uF>.5?1.:.42+.58*abs(dot(n,normalize(vec3(.3,.55,.78))));o=vec4(uC*l,1.);}`));
+    gl.linkProgram(P);gl.useProgram(P);this.loc={V:gl.getUniformLocation(P,'uV'),P:gl.getUniformLocation(P,'uP'),C:gl.getUniformLocation(P,'uC'),F:gl.getUniformLocation(P,'uF')};
+    const mk=a=>{const v=gl.createVertexArray();gl.bindVertexArray(v);const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,a,gl.STATIC_DRAW);
+      const l=gl.getAttribLocation(P,'aPos');gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,3,gl.FLOAT,false,0,0);return v};
+    this.mk=mk;const[BX,BY]=bed;this.bedVao=mk(new Float32Array([0,0,-.2,BX,0,-.2,BX,BY,-.2,0,0,-.2,BX,BY,-.2,0,BY,-.2]));
+    let d=null;cv.onpointerdown=e=>{d=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId)};cv.onpointerup=()=>d=null;
+    cv.onpointermove=e=>{if(!d)return;this.az+=(e.clientX-d[0])*.4;this.el=Math.max(8,Math.min(90,this.el+(e.clientY-d[1])*.3));d=[e.clientX,e.clientY];this.draw()};
+    cv.onwheel=e=>{e.preventDefault();this.zoom=Math.max(.4,Math.min(8,this.zoom*(e.deltaY<0?1.12:.89)));this.draw()};
+    new ResizeObserver(()=>this.draw()).observe(cv);
+  }
+  view(k){if(k==='top'){this.az=0;this.el=90}else{this.az=-28;this.el=38}this.zoom=1;this.draw()}
+  async load(url,rgb){
+    const buf=await (await fetch(url)).arrayBuffer(),dv=new DataView(buf),n=dv.getUint32(80,true),pos=new Float32Array(n*9);
+    let lo=[1e9,1e9],hi=[-1e9,-1e9];
+    for(let i=0;i<n;i++){const o=84+i*50+12;for(let k=0;k<9;k++){const v=dv.getFloat32(o+k*4,true);pos[i*9+k]=v;
+      if(k%3===0){lo[0]=Math.min(lo[0],v);hi[0]=Math.max(hi[0],v)}else if(k%3===1){lo[1]=Math.min(lo[1],v);hi[1]=Math.max(hi[1],v)}}}
+    this.vao=this.mk(pos);this.n=n*3;this.rgb=rgb;this.c=[(lo[0]+hi[0])/2,(lo[1]+hi[1])/2];this.fit=Math.max(Math.hypot(hi[0]-lo[0],hi[1]-lo[1])/2+8,48);this.zoom=1;this.draw();
+  }
+  draw(){const gl=this.gl,cv=this.cv;if(!gl)return;const dpr=devicePixelRatio||1,w=cv.clientWidth*dpr|0,h=cv.clientHeight*dpr|0;if(!w||!h)return;
+    if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+    gl.viewport(0,0,w,h);gl.clearColor(.937,.937,.918,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);
+    const t=(90-this.el)*Math.PI/180,az=this.az*Math.PI/180,R=Math.hypot(...this.bed)/2,hh=this.fit*.8/this.zoom;
+    const V=mul(mul(rotX(-t),rotZ(az)),trans(-this.c[0],-this.c[1],0)),Pm=ortho(hh*w/h,hh,R*4);
+    gl.uniformMatrix4fv(this.loc.V,false,V);gl.uniformMatrix4fv(this.loc.P,false,Pm);
+    gl.uniform3f(this.loc.C,.86,.87,.85);gl.uniform1f(this.loc.F,1);gl.bindVertexArray(this.bedVao);gl.drawArrays(gl.TRIANGLES,0,6);
+    if(this.n){gl.uniform3fv(this.loc.C,this.rgb);gl.uniform1f(this.loc.F,0);gl.bindVertexArray(this.vao);gl.drawArrays(gl.TRIANGLES,0,this.n)}}
+}
+</script>

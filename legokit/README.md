@@ -1,5 +1,7 @@
 # legokit — kit de briques LEGO-compatibles imprimables en 3D, à partir d'un modèle
 
+**Application web :** `python3 legoweb.py` puis http://127.0.0.1:8000 — voir [Application web](#application-web-legowebpy).
+
 Équivalent open-source minimaliste de Brickalike : modèle 3D → voxels → briques → fichiers d'impression + notice.
 Python 3 + numpy, un seul fichier (`legokit.py`).
 
@@ -137,3 +139,24 @@ et `kit/<Couleur>/*.3mf|stl` pour imprimer **seulement** les pièces utilisées.
 Exemple : set 10698, sphère → 10×10×8, 72 briques sur 164 disponibles avec 8 couleurs (14×14×12, 285 briques avec 27 couleurs).
 La notice demande la bibliothèque LDraw (`--ldraw complete.zip` ou téléchargement dans le cache) ; `--no-notice` / `--no-print` pour s'en passer.
 Les codes couleur LDraw reprennent l'id Rebrickable quand la teinte correspond, sinon une couleur directe RVB.
+
+## Application web (`legoweb.py`)
+
+```bash
+python3 legoweb.py                          # http://127.0.0.1:8000
+python3 legoweb.py --port 9000 --ldraw complete.zip --cache ~/.cache/legokit
+```
+
+Serveur Python standard (aucune dépendance), interface dans `web/index.html`, trois onglets :
+
+- **Kit à imprimer** : numéro de set, imprimante (plateau 180 à 350 mm) et jeu → photo du set, taux de couverture, **plateaux 3D interactifs** par couleur
+  (rotation, zoom, vue de dessus), téléchargement 3MF/STL par plateau ou **ZIP** complet, liste des pièces avec **photos**, filtres par couleur et par source.
+- **Modèle avec les pièces du set** : forme, nombre de couleurs → modèle construit avec les seules briques du set, notice 3D intégrée, plateaux, `.ldr`, CSV, ZIP.
+- **Notice de montage** : numéro de set de l'OMR LDraw, ou envoi d'un fichier `.ldr` / `.mpd` → notice 3D étape par étape (bouton PDF dans la notice).
+
+Fonctionnement : les calculs tournent en tâche de fond (une à la fois, avec le journal affiché), les résultats sont conservés 24 h dans `~/.cache/legokit/web/`.
+Premier lancement : téléchargement des données Rebrickable (~15 Mo) et de la bibliothèque LDraw (~150 Mo). Les photos des pièces sont chargées par votre navigateur depuis le CDN Rebrickable.
+
+**Sécurité :** le serveur écoute sur `127.0.0.1` par défaut et n'a pas d'authentification ; il télécharge et écrit des fichiers. Ne l'exposez pas sur Internet sans reverse proxy authentifié.
+Les entrées sont validées (numéro de set, bornes numériques, extensions `.ldr`/`.mpd`, 40 Mo max), les chemins de fichiers sont confinés au dossier de la tâche et les notices générées sont affichées dans un `iframe` isolé (`sandbox`), avec échappement des noms venant d'un fichier envoyé.
+Tests : `python3 test_legoweb.py` (serveur complet, sans réseau).

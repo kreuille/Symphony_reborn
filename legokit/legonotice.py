@@ -272,7 +272,8 @@ for(const m of D.meshes){
 const I=D.inst.map(r=>({m:r[0],s:r[1],c:[r[2],r[3],r[4],r[5]],M:new Float32Array([r[6],r[7],r[8],0,r[9],r[10],r[11],0,r[12],r[13],r[14],0,r[15],r[16],r[17],1])}));
 const N=D.steps.length;let step=N-1,yaw=-0.6,pitch=0.55,zoom=1,dirty=true;
 const sl=document.getElementById('sl');sl.max=N;
-const partsHtml=s=>D.steps[s].map(p=>`<div class="p"><span class="sw" style="background:rgb(${p[2].map(x=>Math.round(x*255))})"></span><span class="q">${p[3]}×</span><span>${p[0]}<br><small>${p[1]}</small></span>${p[4]?'<span class="tag">imprimable</span>':''}</div>`).join('');
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const partsHtml=s=>D.steps[s].map(p=>`<div class="p"><span class="sw" style="background:rgb(${p[2].map(x=>Math.round(x*255))})"></span><span class="q">${p[3]}×</span><span>${esc(p[0])}<br><small>${esc(p[1])}</small></span>${p[4]?'<span class="tag">imprimable</span>':''}</div>`).join('');
 function ui(){sl.value=step+1;document.getElementById('lab').textContent=`Étape ${step+1} / ${N}`;document.getElementById('parts').innerHTML=partsHtml(step);dirty=true}
 function draw(W,H,pr){dirty=false;const dpr=devicePixelRatio||1,w=W||cv.clientWidth*dpr|0,h=H||cv.clientHeight*dpr|0;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
  gl.viewport(0,0,w,h);gl.clearColor(.957,.957,.949,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);
@@ -292,7 +293,7 @@ const go=s=>{step=Math.max(0,Math.min(N-1,s));ui()};
 document.getElementById('prev').onclick=()=>go(step-1);document.getElementById('next').onclick=()=>go(step+1);sl.oninput=()=>go(sl.value-1);
 document.getElementById('dim').onchange=document.getElementById('fit').onchange=()=>dirty=true;
 function buildPrint(){const keep=step;let h='';for(let s=0;s<N;s++){step=s;draw(900,675,true);
- h+=`<section class="blk"><div><div class="hd"><b>${D.title}</b> — étape ${s+1} / ${N}</div><img src="${cv.toDataURL('image/jpeg',.8)}"></div><div class="pl">${partsHtml(s)}</div></section>`}
+ h+=`<section class="blk"><div><div class="hd"><b>${esc(D.title)}</b> — étape ${s+1} / ${N}</div><img src="${cv.toDataURL('image/jpeg',.8)}"></div><div class="pl">${partsHtml(s)}</div></section>`}
  document.getElementById('printroot').innerHTML=h;step=keep;ui();window.__printReady=true}
 document.getElementById('pdf').onclick=()=>{buildPrint();window.print()};
 if(location.hash==='#print'){document.body.classList.add('print');buildPrint()}
@@ -309,7 +310,7 @@ ui();window.__ready=true;
 def write_notice(path, models, first, lib, title, custom=()):
     for n, L in dict(custom).items(): lib.add_custom(n, L)
     data, nsteps, ninst = build(models, first, lib, title)
-    html = HTML.replace('__TITLE__', title.replace('<', '&lt;')).replace('__DATA__', json.dumps(data, separators=(',', ':')))
+    html = HTML.replace('__TITLE__', title.replace('<', '&lt;')).replace('__DATA__', json.dumps(data, separators=(',', ':')).replace('</', '<\\/'))
     open(path, 'w', encoding='utf-8').write(html)
     return nsteps, ninst, len(data['meshes']), os.path.getsize(path)
 
