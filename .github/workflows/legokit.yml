@@ -1,0 +1,108 @@
+name: LegoKit
+
+# Lancement manuel : onglet Actions > LegoKit > Run workflow.
+# Le résultat (plateaux 3MF/STL par couleur, images, modèle, notice) est téléchargeable dans les « Artifacts » du run.
+on:
+  workflow_dispatch:
+    inputs:
+      set:
+        description: "Numéro de set (ex. 40468 ou 10698-1)"
+        required: true
+        type: string
+      mode:
+        description: "kit = plateaux du set ; build = modèle construit avec les pièces du set"
+        type: choice
+        options: [kit, build]
+        default: kit
+      bed:
+        description: "Plateau d'impression en mm (256 = X1/P1/A1, 180 = A1 mini)"
+        type: choice
+        options: ["256", "180", "220"]
+        default: "256"
+      tol:
+        description: "Jeu d'impression par côté, en mm"
+        type: string
+        default: "0.1"
+      shape:
+        description: "Mode build : forme (sphere, cylinder, cone, pyramid, torus)"
+        type: choice
+        options: [sphere, cylinder, cone, pyramid, torus]
+        default: sphere
+      max_colors:
+        description: "Mode build : nombre de couleurs (0 = toutes)"
+        type: string
+        default: "8"
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: legokit/requirements.txt
+
+      - run: pip install -r legokit/requirements.txt
+
+      # Données Rebrickable et bibliothèque LDraw (~165 Mo) : téléchargées une fois puis mises en cache.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/legokit
+          key: legokit-data-v1
+
+      - name: Valider les entrées
+        env:
+          SET: ${{ inputs.set }}
+          TOL: ${{ inputs.tol }}
+          MAXC: ${{ inputs.max_colors }}
+        run: |
+          [[ "$SET" =~ ^[0-9]{1,8}(-[0-9]{1,3})?$ ]] || { echo "numéro de set invalide"; exit 1; }
+          [[ "$TOL" =~ ^[0-9](\.[0-9]+)?$ ]] || { echo "jeu invalide"; exit 1; }
+          [[ "$MAXC" =~ ^[0-9]{1,2}$ ]] || { echo "nombre de couleurs invalide"; exit 1; }
+
+      - name: Kit à imprimer
+        if: ${{ inputs.mode == 'kit' }}
+        working-directory: legokit
+        env:
+          SET: ${{ inputs.set }}
+          BED: ${{ inputs.bed }}
+          TOL: ${{ inputs.tol }}
+        run: python3 legoprint.py "$SET" --out "$GITHUB_WORKSPACE/resultat" --bed "$BED" "$BED" --tol "$TOL"
+
+      - name: Images des plateaux
+        if: ${{ inputs.mode == 'kit' }}
+        continue-on-error: true            # nécessite Chrome (présent sur les runners) ; sans lui le kit reste valide
+        working-directory: legokit
+        env:
+          BED: ${{ inputs.bed }}
+        run: python3 legopreview.py "$GITHUB_WORKSPACE/resultat" --out "$GITHUB_WORKSPACE/resultat/apercus" --bed "$BED" "$BED"
+
+      - name: Modèle construit avec les pièces du set
+        if: ${{ inputs.mode == 'build' }}
+        working-directory: legokit
+        env:
+          SET: ${{ inputs.set }}
+          BED: ${{ inputs.bed }}
+          TOL: ${{ inputs.tol }}
+          SHAPE: ${{ inputs.shape }}
+          MAXC: ${{ inputs.max_colors }}
+        run: python3 legobuild.py "$SET" --out "$GITHUB_WORKSPACE/resultat" --shape "$SHAPE" --max-colors "$MAXC" --bed "$BED" "$BED" --tol "$TOL"
+
+      - name: PDF de la notice
+        if: ${{ inputs.mode == 'build' }}
+        continue-on-error: true
+        working-directory: legokit
+        run: python3 -c "import legonotice as N; N.export_pdf('$GITHUB_WORKSPACE/resultat/notice.html', '$GITHUB_WORKSPACE/resultat/notice.pdf')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: legokit-${{ inputs.mode }}-${{ inputs.set }}
+          path: resultat/
+          if-no-files-found: error
