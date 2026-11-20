@@ -97,6 +97,7 @@ def main():
     ap.add_argument('--colors', help='couleurs à générer, séparées par des virgules (défaut : toutes)')
     ap.add_argument('--spares', action='store_true')
     ap.add_argument('--ldraw', help='complete.zip LDraw (sinon téléchargé dans le cache, ~150 Mo)')
+    ap.add_argument('--preview', action='store_true', help='écrit aussi des images PNG des plateaux dans <sortie>/apercus/ (Chrome/Chromium requis)')
     ap.add_argument('--no-ldraw', action='store_true', help='seulement briques/plaques/tuiles paramétriques (pas de pentes ni de pièces spéciales)')
     a = ap.parse_args()
     cache = S.cache_dir(a.cache); s = S.find_set(cache, a.set)
@@ -113,6 +114,10 @@ def main():
     print(f"\n{s['set_num']} {s['name']} : {tot} pièces dans l'inventaire\n"
           f"  {res['param']} paramétriques + {res['ldraw']} depuis LDraw = {res['param'] + res['ldraw']} générées sur {res['plates']} plateaux -> {out}/")
     for pn, nm, q, why in res['skipped']: print(f'  non générée : {q} x {pn} {nm} ({why})')
+    if a.preview:
+        import legopreview as PV
+        files = PV.render_kit(out, os.path.join(out, 'apercus'), tuple(a.bed))
+        print(f'  {len(files)} images -> {out}/apercus/')
 
 def print_kit(inv, out, bed, tol, want=None, quiet=False, lib=None, relations=None):
     """inv : lignes d'inventaire (voir legoset.inventory) ; écrit un dossier par couleur.

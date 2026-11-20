@@ -77,6 +77,9 @@ La bibliothèque LDraw (~150 Mo) est téléchargée une fois dans le cache (`--l
 
 Résultats : 10698 → 790/790 pièces sur 33 plateaux ; 11011 → 1 500/1 500 sur 39 ; 40468 (Yellow Taxi) → 123/124 sur 9 (planche d'autocollants exclue).
 
+**Images des plateaux :** `--preview` (ou `python3 legopreview.py kit_40468/`) écrit dans `apercus/` une image PNG par plateau (pièces en couleur, vue de dessus inclinée,
+plateau dessiné dessous) et `apercu_plateaux.png`, planche d'ensemble de tous les plateaux. Rendu WebGL dans Chrome/Chromium/Edge sans interface (variable `CHROME`).
+
 **À savoir avant d'imprimer les pièces LDraw :**
 - La géométrie LDraw est fidèle à la forme extérieure, pas optimisée pour l'impression : 3 à 13 % d'arêtes non appariées (jonctions en T) que les trancheurs réparent à l'import, pas de supports ajoutés (pentes inversées, arches, supports : à supporter dans le trancheur).
 - Le jeu d'emboîtement des pièces spéciales est celui de LDraw moins 0,2 mm sur l'emprise ; à calibrer sur un premier essai (même démarche que la 2x4).
