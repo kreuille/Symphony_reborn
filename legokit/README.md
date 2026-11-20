@@ -154,9 +154,23 @@ Serveur Python standard (aucune dépendance), interface dans `web/index.html`, t
 - **Modèle avec les pièces du set** : forme, nombre de couleurs → modèle construit avec les seules briques du set, notice 3D intégrée, plateaux, `.ldr`, CSV, ZIP.
 - **Notice de montage** : numéro de set de l'OMR LDraw, ou envoi d'un fichier `.ldr` / `.mpd` → notice 3D étape par étape (bouton PDF dans la notice).
 
-Fonctionnement : les calculs tournent en tâche de fond (une à la fois, avec le journal affiché), les résultats sont conservés 24 h dans `~/.cache/legokit/web/`.
+Fonctionnement : les calculs tournent en tâche de fond (une à la fois, avec le journal affiché), les résultats sont conservés 24 h dans le dossier de cache (`~/.cache/legokit/rebrickable/web/`).
 Premier lancement : téléchargement des données Rebrickable (~15 Mo) et de la bibliothèque LDraw (~150 Mo). Les photos des pièces sont chargées par votre navigateur depuis le CDN Rebrickable.
 
 **Sécurité :** le serveur écoute sur `127.0.0.1` par défaut et n'a pas d'authentification ; il télécharge et écrit des fichiers. Ne l'exposez pas sur Internet sans reverse proxy authentifié.
 Les entrées sont validées (numéro de set, bornes numériques, extensions `.ldr`/`.mpd`, 40 Mo max), les chemins de fichiers sont confinés au dossier de la tâche et les notices générées sont affichées dans un `iframe` isolé (`sandbox`), avec échappement des noms venant d'un fichier envoyé.
 Tests : `python3 test_legoweb.py` (serveur complet, sans réseau).
+
+## Lancer depuis GitHub
+
+GitHub Pages ne convient pas (il faut Python côté serveur), mais deux autres voies fonctionnent :
+
+**1. Codespaces : l'application web dans le navigateur, rien à installer.** Sur la page du dépôt : *Code* → *Codespaces* → *Create codespace* (choisir la branche voulue).
+Le conteneur (`.devcontainer/devcontainer.json`) installe numpy, démarre `legoweb.py` et ouvre l'onglet « LegoKit » (port 8000, privé : seul votre compte GitHub y accède).
+Les téléchargements Rebrickable/LDraw se font depuis les serveurs GitHub (rapide). Si l'onglet ne s'ouvre pas : *Ports* → 8000 → ouvrir dans le navigateur.
+
+**2. GitHub Actions : un bouton qui produit le kit à télécharger.** Onglet *Actions* → *LegoKit* → *Run workflow* :
+numéro de set, mode (`kit` ou `build`), taille du plateau, jeu, et pour `build` la forme et le nombre de couleurs.
+À la fin du run, le dossier de résultats (plateaux 3MF/STL par couleur, images des plateaux, ou modèle `.ldr` + notice + PDF) est dans *Artifacts*.
+Les données (~165 Mo) sont mises en cache entre les runs. Le workflow (`.github/workflows/legokit.yml`) n'apparaît dans l'onglet Actions qu'une fois fusionné sur la branche par défaut.
+Les entrées sont validées avant d'être passées aux scripts (pas d'injection de commande). Ne le branchez pas sur un dépôt public sans limiter qui peut le lancer : il consomme des minutes de calcul.
