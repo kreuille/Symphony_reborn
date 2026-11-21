@@ -1,6 +1,6 @@
 # Journal des décisions et points ouverts
 
-Dernière mise à jour : 4 novembre 2026. Les décisions ci-dessous viennent d'Arnaud ; les hypothèses sont signalées comme telles.
+Dernière mise à jour : 21 novembre 2026. Les décisions ci-dessous viennent d'Arnaud ; les hypothèses sont signalées comme telles.
 
 ## Décisions prises
 
@@ -13,6 +13,7 @@ Dernière mise à jour : 4 novembre 2026. Les décisions ci-dessous viennent d'A
 | 5 | Précision d'impression inférieure à 0,10 mm : valeur annoncée pour le dentaire | Non démontrée sur formes auriculaires ; première mesure à faire en semaine 5 |
 | 6 | SprintRay a déjà un cloud et un CAM intégré au cloud | Cloud et CAM : audit, paramétrage et extension de l'existant, pas de développement de zéro |
 | 7 | Aucun chiffre de budget pour le moment | Montants à remettre après la phase 0, à partir de coûts réels |
+| 8 | Application Android de scan de l'oreille **externe**, développée en interne, sans API tierce (KIRI Engine, Polycam) ; le conduit reste mesuré par la sonde | Spécification `specs/scan-oreille-externe-android-spec.md` ; précision visée 2 mm RMS, non métrologique ; pipeline serveur dans `earscan/` |
 
 ## Hypothèses à valider
 

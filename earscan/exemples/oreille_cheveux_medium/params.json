@@ -1,0 +1,14 @@
+{
+  "views": 24,
+  "hair": "medium",
+  "seed": 1,
+  "size": [
+    960,
+    720
+  ],
+  "marker_id": 7,
+  "marker_size_mm": 20.0,
+  "model_unit": 0.1,
+  "expected_scale_to_mm": 10.0,
+  "units_in_model": "mm x model_unit"
+}

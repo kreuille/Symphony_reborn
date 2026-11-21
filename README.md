@@ -21,6 +21,7 @@ Statut : propositions de travail, version du 4 novembre 2026. Aucun budget n'est
 | Chantier | Spécification phase 1 | Plan pilote |
 |---|---|---|
 | Scanner 3D intra-auriculaire (G2a) | `specs/scanner-spec-prototype.md` | `specs/scanner-plan-pilote.md` |
+| Scan de l'oreille externe par smartphone Android | `specs/scan-oreille-externe-android-spec.md` | pipeline serveur : `earscan/` |
 | Cellule de production G1 | `specs/g1-spec-cellule-production.md` | `specs/g1-plan-pilote-cellule.md` |
 | Logiciel de design (G2b) | `specs/logiciel-spec-design-auriculaire.md` | `specs/logiciel-plan-pilote.md` |
 | CAM (volet du logiciel) | `specs/cam-spec-phase1.md` | couvert par les plans pilotes du logiciel et de G1 |

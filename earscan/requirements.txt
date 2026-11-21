@@ -1,0 +1,6 @@
+numpy>=1.24
+scipy>=1.10
+opencv-python-headless>=4.7
+trimesh>=4.0
+rtree>=1.0
+networkx>=3.0
