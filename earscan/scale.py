@@ -24,6 +24,8 @@ class ScaleEstimate:
     n_views: int                 # nombre d'images où le marqueur est vu
     side_model: tuple[float, ...]  # 4 côtés dans le repère du modèle
     spread: float                # écart type relatif des 4 côtés (qualité de la triangulation)
+    corners: tuple = ()          # 4 coins du marqueur (4x3), repère du modèle
+    up: tuple = ()               # normale unitaire du plan du marqueur, orientée vers les caméras
 
 
 def detect_markers(image_bgr: np.ndarray, dictionary: str = "DICT_4X4_50") -> dict[int, np.ndarray]:
@@ -55,6 +57,7 @@ def estimate_scale(images_dir: str | Path, cameras: dict[int, Camera], images: d
                    max_spread: float = 0.05) -> ScaleEstimate:
     obs: list[np.ndarray] = []   # (4, 2) coins normalisés par image
     projs: list[np.ndarray] = []
+    centers: list[np.ndarray] = []
     for img in images.values():
         frame = cv2.imread(str(Path(images_dir) / img.name))
         if frame is None:
@@ -69,6 +72,7 @@ def estimate_scale(images_dir: str | Path, cameras: dict[int, Camera], images: d
         R = qvec_to_rotmat(img.qvec)
         projs.append(np.hstack([R, np.array(img.tvec).reshape(3, 1)]))
         obs.append(norm)
+        centers.append(-R.T @ np.array(img.tvec))
     if len(obs) < 2:
         raise ScaleError(f"marqueur {marker_id} vu dans {len(obs)} image(s) ; il en faut au moins 2")
 
@@ -79,7 +83,12 @@ def estimate_scale(images_dir: str | Path, cameras: dict[int, Camera], images: d
     if spread > max_spread:
         raise ScaleError(f"côtés du marqueur incohérents (écart {spread:.1%} > {max_spread:.0%}) : "
                          "marqueur flou, plié ou mal détecté")
-    return ScaleEstimate(marker_size_mm / mean, len(obs), tuple(float(s) for s in sides), spread)
+    n = np.cross(corners3d[1] - corners3d[0], corners3d[3] - corners3d[0])
+    n /= np.linalg.norm(n)
+    if (np.mean(centers, axis=0) - corners3d.mean(axis=0)) @ n < 0:
+        n = -n
+    return ScaleEstimate(marker_size_mm / mean, len(obs), tuple(float(s) for s in sides), spread,
+                         tuple(map(tuple, corners3d.tolist())), tuple(n.tolist()))
 
 
 def estimate_scale_from_model(model_dir: str | Path, images_dir: str | Path, marker_id: int,

@@ -164,3 +164,110 @@ def test_marker_svg_is_detectable():
     assert 7 in found
     side = np.linalg.norm(found[7][0] - found[7][1])
     assert side == pytest.approx(200, abs=3)  # 20 mm à 10 px/mm
+
+
+# --- nettoyage 3D -----------------------------------------------------------------------------
+
+def _scene():
+    """Oreille (ellipsoïde posé sur z=0) + table + objet lointain + débris flottant."""
+    ear = trimesh.creation.icosphere(subdivisions=4)
+    ear.vertices = ear.vertices * [15, 10, 10] + [0, 0, 10]
+    table = trimesh.creation.box(extents=[200, 200, 2])
+    table.apply_translation([0, 0, -1])
+    far = trimesh.creation.icosphere(subdivisions=2, radius=10)
+    far.apply_translation([100, 0, 20])
+    debris = trimesh.creation.icosphere(subdivisions=1, radius=1.5)
+    debris.apply_translation([5, 5, 40])
+    return trimesh.util.concatenate([ear, table, far, debris])
+
+
+def test_fit_ground_plane():
+    from earscan.clean import fit_ground_plane
+    o, n = fit_ground_plane(_scene())
+    assert abs(n[2]) > 0.99 and n[2] > 0          # normale vers l'oreille
+    assert abs(o[2]) < 0.5
+
+
+def test_clean_ear_with_known_plane():
+    from earscan.clean import clean_ear
+    out = clean_ear(_scene(), origin=[30, 0, 0], up=[0, 0, 1], center=[30, 0, 0], radius_mm=60)
+    assert out.vertices[:, 2].min() >= 0.9                    # table retirée
+    assert out.vertices[:, 0].max() < 20 and out.vertices[:, 2].max() < 20.5   # objet lointain et débris retirés
+    assert out.is_watertight                                  # base refermée
+    assert out.extents[0] == pytest.approx(30, abs=1) and out.extents[1] == pytest.approx(20, abs=1)
+
+
+def test_clean_ear_automatic_plane():
+    from earscan.clean import clean_ear
+    out = clean_ear(_scene())
+    assert out.vertices[:, 2].min() >= 0.9
+    assert out.extents[0] < 40 and out.is_watertight
+
+
+def test_smoothing_reduces_noise():
+    from earscan.clean import smooth
+    base = trimesh.creation.icosphere(subdivisions=4, radius=10)
+    noisy = base.copy()
+    noisy.vertices = noisy.vertices * (1 + np.random.default_rng(3).normal(0, 0.03, (len(base.vertices), 1)))
+
+    def roughness(m):
+        return float(np.std(np.linalg.norm(m.vertices, axis=1)))
+    assert roughness(smooth(noisy, 10)) < 0.5 * roughness(noisy)
+
+
+# --- détourage 2D -----------------------------------------------------------------------------
+
+def _photo(seed=0):
+    """Fond bleu uni ; ellipse couleur peau ; renvoie l'image et la vérité terrain."""
+    rng = np.random.default_rng(seed)
+    img = np.full((400, 600, 3), (160, 90, 30), np.uint8)               # fond bleu (BGR)
+    truth = np.zeros((400, 600), np.uint8)
+    cv2.ellipse(truth, (300, 200), (90, 130), 20, 0, 360, 255, -1)
+    img[truth > 0] = (120, 150, 200)
+    img = np.clip(img + rng.normal(0, 4, img.shape), 0, 255).astype(np.uint8)
+    return img, truth
+
+
+def _iou(a, b):
+    a, b = a > 0, b > 0
+    return (a & b).sum() / (a | b).sum()
+
+
+def test_segment_background():
+    from earscan.segment import segment_background
+    img, truth = _photo()
+    assert _iou(segment_background(img), truth) > 0.95
+
+
+def test_segment_grabcut():
+    from earscan.segment import segment_grabcut
+    img, truth = _photo()
+    assert _iou(segment_grabcut(img), truth) > 0.85
+
+
+def test_write_masks_names_and_marker(tmp_path):
+    from earscan.segment import write_masks
+    model, imgs = _write_model(tmp_path, CENTERS)
+    n = write_masks(imgs, tmp_path / "masks", "background", marker_id=7, preview_dir=tmp_path / "prev")
+    assert n == 4
+    m = cv2.imread(str(tmp_path / "masks" / "1.png.png"), cv2.IMREAD_GRAYSCALE)   # convention COLMAP
+    assert m.shape == (H, W) and set(np.unique(m)) <= {0, 255}
+    assert (tmp_path / "prev" / "1.jpg").exists()
+
+
+def test_build_commands_with_masks_and_trim(tmp_path):
+    cmds = dict(build_commands(tmp_path / "img", tmp_path / "w", mask_dir=tmp_path / "m", poisson_trim=9))
+    assert "--ImageReader.mask_path" in cmds["features"]
+    assert cmds["mesh"][-2:] == ["--PoissonMeshing.trim", "9"]
+
+
+def test_cli_clean_roundtrip(tmp_path):
+    import json
+    from earscan.__main__ import main
+    scene = _scene()
+    scene.export(tmp_path / "scene.ply")
+    (tmp_path / "r.json").write_text(json.dumps({"plane_origin_mm": [30, 0, 0], "plane_up": [0, 0, 1]}))
+    assert main(["clean", str(tmp_path / "scene.ply"), "--out", str(tmp_path / "ear.ply"),
+                 "--report", str(tmp_path / "r.json"), "--roi-radius-mm", "60"]) == 0
+    out = trimesh.load(tmp_path / "ear.ply", force="mesh")
+    assert out.vertices[:, 2].min() >= 0.9 and out.is_watertight

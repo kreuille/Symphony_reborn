@@ -13,20 +13,25 @@ from pathlib import Path
 
 import trimesh
 
+from .clean import clean_ear, largest_component
 from .scale import ScaleEstimate, estimate_scale_from_model
+from .segment import write_masks
 
 
 def build_commands(images_dir: Path, work: Path, colmap_bin: str = "colmap", cpu: bool = False,
-                   sparse_only: bool = False) -> list[tuple[str, list[str]]]:
+                   sparse_only: bool = False, mask_dir: Path | None = None,
+                   poisson_trim: float | None = None) -> list[tuple[str, list[str]]]:
     """Commandes COLMAP dans l'ordre d'exécution (chaque élément : nom, argv)."""
     db, sparse, dense = work / "database.db", work / "sparse", work / "dense"
     # Options CPU : noms valables pour COLMAP <= 3.11 ; renommés FeatureExtraction/FeatureMatching ensuite.
     cpu_extract = ["--SiftExtraction.use_gpu", "0"] if cpu else []
     cpu_match = ["--SiftMatching.use_gpu", "0"] if cpu else []
+    masks = ["--ImageReader.mask_path", str(mask_dir)] if mask_dir else []   # noir = zone ignorée
+    trim = ["--PoissonMeshing.trim", str(poisson_trim)] if poisson_trim is not None else []
     cmds = [
         ("features", [colmap_bin, "feature_extractor", "--database_path", str(db),
                       "--image_path", str(images_dir), "--ImageReader.single_camera", "1",
-                      "--ImageReader.camera_model", "SIMPLE_RADIAL", *cpu_extract]),
+                      "--ImageReader.camera_model", "SIMPLE_RADIAL", *masks, *cpu_extract]),
         ("matching", [colmap_bin, "exhaustive_matcher", "--database_path", str(db), *cpu_match]),
         ("mapper", [colmap_bin, "mapper", "--database_path", str(db),
                     "--image_path", str(images_dir), "--output_path", str(sparse)]),
@@ -40,7 +45,7 @@ def build_commands(images_dir: Path, work: Path, colmap_bin: str = "colmap", cpu
             ("fusion", [colmap_bin, "stereo_fusion", "--workspace_path", str(dense),
                         "--output_path", str(dense / "fused.ply")]),
             ("mesh", [colmap_bin, "poisson_mesher", "--input_path", str(dense / "fused.ply"),
-                      "--output_path", str(dense / "meshed-poisson.ply")]),
+                      "--output_path", str(dense / "meshed-poisson.ply"), *trim]),
         ]
     return cmds
 
@@ -55,20 +60,27 @@ def _largest_model(sparse: Path) -> Path:
 
 def clean_mesh(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
     """Garde la plus grande composante connexe (retire les îlots de fond)."""
-    parts = mesh.split(only_watertight=False)
-    return max(parts, key=lambda m: len(m.faces)) if parts else mesh
+    return largest_component(mesh)
 
 
 def reconstruct(images_dir: str | Path, out_dir: str | Path, marker_id: int, marker_size_mm: float,
                 colmap_bin: str = "colmap", cpu: bool = False, sparse_only: bool = False,
-                dictionary: str = "DICT_4X4_50") -> dict:
+                dictionary: str = "DICT_4X4_50", mask: str | None = None, crop: bool = True,
+                roi_radius_mm: float | None = None, smooth_iters: int = 10,
+                poisson_trim: float | None = None) -> dict:
     images_dir, out_dir = Path(images_dir).resolve(), Path(out_dir).resolve()
     if shutil.which(colmap_bin) is None:
         raise RuntimeError(f"COLMAP introuvable ({colmap_bin}) : installer COLMAP ou donner --colmap")
     work = out_dir / "work"
     (work / "sparse").mkdir(parents=True, exist_ok=True)
 
-    for name, argv in build_commands(images_dir, work, colmap_bin, cpu, sparse_only):
+    mask_dir = None
+    if mask:
+        mask_dir = work / "masks"
+        n = write_masks(images_dir, mask_dir, mask, marker_id, dictionary, preview_dir=work / "masks_preview")
+        print(f"[earscan] {n} masques ({mask}) ; aperçus dans {work / 'masks_preview'}", flush=True)
+
+    for name, argv in build_commands(images_dir, work, colmap_bin, cpu, sparse_only, mask_dir, poisson_trim):
         print(f"[earscan] {name}", flush=True)
         if name == "undistort":  # le modèle utilisé est le plus grand, pas forcément « 0 »
             best = _largest_model(work / "sparse")
@@ -83,12 +95,20 @@ def reconstruct(images_dir: str | Path, out_dir: str | Path, marker_id: int, mar
 
     est: ScaleEstimate = estimate_scale_from_model(work / "sparse_txt", images_dir, marker_id,
                                                    marker_size_mm, dictionary=dictionary)
+    import numpy as np
+    origin_mm = (np.array(est.corners).mean(axis=0) * est.scale).tolist()
     report = {"scale_to_mm": est.scale, "marker_views": est.n_views,
               "marker_sides_model": est.side_model, "marker_spread": est.spread,
-              "sparse_only": sparse_only}
+              "sparse_only": sparse_only, "plane_origin_mm": origin_mm, "plane_up": list(est.up)}
     if not sparse_only:
-        mesh = clean_mesh(trimesh.load(work / "dense" / "meshed-poisson.ply", force="mesh"))
+        mesh = trimesh.load(work / "dense" / "meshed-poisson.ply", force="mesh")
         mesh.apply_scale(est.scale)
+        mesh.export(out_dir / "scene_mm.ply")      # maillage brut mis à l'échelle, avant nettoyage
+        if crop:
+            mesh = clean_ear(mesh, origin_mm, est.up, center=origin_mm, radius_mm=roi_radius_mm,
+                             smooth_iters=smooth_iters)
+        else:
+            mesh = clean_mesh(mesh)
         mesh.export(out_dir / "ear_mm.ply")
         mesh.export(out_dir / "ear_mm.stl")
         report.update(watertight=bool(mesh.is_watertight), faces=int(len(mesh.faces)),

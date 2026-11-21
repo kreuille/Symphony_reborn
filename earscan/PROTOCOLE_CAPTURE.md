@@ -7,6 +7,7 @@ Objectif : produire un jeu d'images exploitable par `python -m earscan reconstru
 - Fantôme d'oreille (silicone ou résine) posé sur un support fixe, à hauteur d'œil.
 - Marqueur `earscan/marker_7_20mm.svg` imprimé **à 100 % (sans mise à l'échelle)** sur papier mat, puis **mesuré à la règle** : le côté du carré noir doit faire 20 mm (si l'impression dévie, noter la vraie valeur et la donner à `--marker-size-mm`). Coller bien à plat à côté de l'oreille, dans le même plan que la zone à mesurer.
 - Téléphone Android sur la même focale pendant toute la capture (pas de zoom, pas de changement d'objectif), mise au point verrouillée si possible.
+- **Fond uni mat** (papier bleu ou vert, sans pli) derrière et sous le fantôme : permet de détourer l'oreille automatiquement.
 - Éclairage doux et uniforme (lumière du jour indirecte ou deux sources diffuses), sans reflet ni ombre portée marquée.
 
 ## Capture
