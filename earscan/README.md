@@ -24,6 +24,8 @@ python -m earscan evaluate sortie/ear_mm.ply reference.stl
 python -m pytest earscan -q                      # tests
 ```
 
+Le marqueur se génère avec `python -m earscan.make_marker --id 7 --size-mm 20 --out marqueur.svg` (exemple prêt à imprimer : `marker_7_20mm.svg`) ; le protocole de capture est dans `PROTOCOLE_CAPTURE.md`.
+
 Le marqueur (dictionnaire `DICT_4X4_50` par défaut) s'imprime à une taille connue ; `--marker-size-mm` est le côté du carré noir. Le placer à côté de l'oreille, dans le même plan que la zone à mesurer, bien à plat.
 
 ## État de la validation

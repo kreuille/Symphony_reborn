@@ -147,3 +147,20 @@ def test_clean_mesh_keeps_largest_component():
     small.apply_translation([50, 0, 0])
     cleaned = clean_mesh(trimesh.util.concatenate([big, small]))
     assert len(cleaned.faces) == len(big.faces)
+
+
+def test_marker_svg_is_detectable():
+    import re
+    from earscan.make_marker import marker_svg
+    from earscan.scale import detect_markers
+    svg = marker_svg(7, 20.0, 5.0)
+    assert 'width="30.0mm"' in svg
+    # Rastérisation directe du SVG : 10 px par mm.
+    img = np.full((300, 300), 255, np.uint8)
+    for x, y, w, h in re.findall(r'<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/>', svg):
+        x0, y0 = round(float(x) * 10), round(float(y) * 10)
+        img[y0:round((float(y) + float(h)) * 10), x0:round((float(x) + float(w)) * 10)] = 0
+    found = detect_markers(img)
+    assert 7 in found
+    side = np.linalg.norm(found[7][0] - found[7][1])
+    assert side == pytest.approx(200, abs=3)  # 20 mm à 10 px/mm
