@@ -2,8 +2,10 @@
 
 Deux méthodes sans modèle appris :
 - `background` : fond uni (papier mat bleu ou vert). Le fond est estimé sur les bords de l'image ; tout ce qui
-  s'en écarte en couleur est gardé. Fiable si le fond est vraiment uniforme.
-- `grabcut` : GrabCut initialisé par un rectangle central ; plus tolérant, moins fiable.
+  s'en écarte en couleur est gardé, **cheveux compris** : un seuil de couleur ne sépare pas les cheveux de la
+  peau (essai d'une méthode « peau » sur le lot synthétique : échec, 77 à 85 % des cheveux conservés).
+- `grabcut` : GrabCut initialisé par un rectangle central. **Peu fiable** dès que l'oreille est petite dans
+  l'image (sur le lot synthétique, il prend le vignettage pour du premier plan) : à éviter.
 """
 from __future__ import annotations
 
@@ -17,12 +19,16 @@ from .scale import detect_markers
 IMG_EXT = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp"}
 
 
-def _largest_blob_filled(mask: np.ndarray) -> np.ndarray:
+def _largest_blob_filled(mask: np.ndarray, min_rel: float = 0.15, fill: bool = True) -> np.ndarray:
+    """Garde les îlots d'aire >= `min_rel` x le plus grand (l'oreille et le marqueur, pas les poussières)."""
     n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
     if n <= 1:
         return mask
-    keep = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-    out = (labels == keep).astype(np.uint8) * 255
+    areas = stats[1:, cv2.CC_STAT_AREA]
+    keep = 1 + np.flatnonzero(areas >= min_rel * areas.max())
+    out = np.isin(labels, keep).astype(np.uint8) * 255
+    if not fill:
+        return out
     contours, _ = cv2.findContours(out, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cv2.drawContours(out, contours, -1, 255, thickness=cv2.FILLED)   # comble les trous intérieurs
     return out

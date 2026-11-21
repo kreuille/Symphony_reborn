@@ -20,7 +20,7 @@ python -m earscan masks captures/ --out masques/ --method background --marker-id
 python -m earscan reconstruct captures/ --out sortie/ --marker-id 7 --marker-size-mm 20 --mask background
 ```
 
-COLMAP n'extrait alors de points que sur l'oreille et le marqueur : moins de bruit, recalage plus propre. `--method grabcut` marche sans fond uni mais est moins fiable. **Toujours regarder les aperçus** avant de lancer.
+COLMAP n'extrait alors de points que sur l'oreille et le marqueur : moins de bruit, recalage plus propre. `--method grabcut` est peu fiable (voir le lot synthétique plus bas) : à éviter. **Toujours regarder les aperçus** avant de lancer.
 
 **2. Sur le maillage (après la reconstruction).** Fait automatiquement par `reconstruct` (désactivable par `--no-crop`) :
 
@@ -40,6 +40,31 @@ python -m earscan clean ancien.ply --out propre.ply      # sans report : plan do
 `scene_mm.ply` est le maillage brut mis à l'échelle ; `ear_mm.ply` est le résultat nettoyé. Pour une surface plus nette dès COLMAP, augmenter `--poisson-trim` (par exemple 9 à 10) retire davantage de surface extrapolée par le maillage de Poisson.
 
 La surface reste limitée par les photos : plus de recouvrement, une mise au point nette et un éclairage uniforme améliorent le résultat bien plus que le lissage.
+
+## Lot d'images synthétiques (avec cheveux)
+
+`earscan/synth.py` génère des photos simulées d'une oreille stylisée, avec cheveux, marqueur ArUco, fond bleu uni, ombrage, bruit et poses de caméra connues. Il sert à tester le détourage et l'échelle en connaissant la bonne réponse. Un exemple de 24 vues (cheveux moyens) est dans `earscan/exemples/oreille_cheveux_medium/` (aperçu : `apercu.jpg`).
+
+```bash
+python -m earscan.synth --out synth/ --views 48 --hair medium --seed 1      # none | light | medium | heavy
+python -m earscan masks synth/images --out synth/masques --method background --marker-id 7
+```
+
+Contenu : `images/` (photos), `truth/ear_silhouette|ear_visible|hair/` (masques de vérité), `model/` (poses exactes au format COLMAP, en mm x `--model-unit`, donc échelle à retrouver = 1/`--model-unit`), `reference_ear_mm.ply` (surface de référence étanche en mm), `params.json`.
+
+Résultats mesurés sur ce lot (8 vues, 960x720) :
+
+| Cheveux | Détourage `background`, IoU avec l'oreille visible | Cheveux restés dans le masque |
+|---|---|---|
+| aucun | 0,99 | 0 % |
+| légers | 0,50 | 99 % |
+| moyens | 0,32 | 99 % |
+| épais | 0,22 | 100 % |
+
+- L'échelle par marqueur est retrouvée à 0,2 % près (10,02 pour 10,00 attendu), avec 8 vues du marqueur sur 8.
+- **Le détourage par fond uni ne retire pas les cheveux** : ils diffèrent du fond, donc ils sont gardés. Un essai de séparation par couleur de peau a échoué (77 à 85 % des cheveux conservés, oreille dégradée), il n'a pas été gardé. GrabCut est inutilisable ici (IoU d'environ 0,2).
+- Pour de vraies photos avec cheveux : dégager l'oreille (cheveux attachés ou plaqués), ou un modèle de segmentation appris, non traité.
+- Limites du lot : forme d'oreille stylisée, cheveux en traits de couleur unie, éclairage simple. La reconstruction COLMAP complète n'a pas été lancée sur ce lot.
 
 ## Utilisation
 

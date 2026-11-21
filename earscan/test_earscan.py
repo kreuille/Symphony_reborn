@@ -271,3 +271,28 @@ def test_cli_clean_roundtrip(tmp_path):
                  "--report", str(tmp_path / "r.json"), "--roi-radius-mm", "60"]) == 0
     out = trimesh.load(tmp_path / "ear.ply", force="mesh")
     assert out.vertices[:, 2].min() >= 0.9 and out.is_watertight
+
+
+# --- lot synthétique ---------------------------------------------------------------------------
+
+def test_synthetic_set_scale_and_truth(tmp_path):
+    from earscan.synth import generate
+    p = generate(tmp_path, views=4, hair="medium", size=(480, 360), model_unit=0.1)
+    assert p["views"] == 4 and (tmp_path / "images" / "view_003.jpg").exists()
+    est = estimate_scale_from_model(tmp_path / "model", tmp_path / "images", 7, 20.0)
+    assert est.n_views == 4 and est.scale == pytest.approx(10.0, rel=0.02)   # 1 / model_unit
+    hair = cv2.imread(str(tmp_path / "truth/hair/view_000.png"), 0)
+    vis = cv2.imread(str(tmp_path / "truth/ear_visible/view_000.png"), 0)
+    sil = cv2.imread(str(tmp_path / "truth/ear_silhouette/view_000.png"), 0)
+    assert (hair > 0).sum() > 0 and (vis > 0).sum() < (sil > 0).sum()          # les cheveux masquent l'oreille
+    ref = trimesh.load(tmp_path / "reference_ear_mm.ply", force="mesh")
+    assert ref.is_watertight and 25 < ref.extents[1] < 70
+
+
+def test_background_mask_keeps_ear_and_marker_even_if_marker_is_larger(tmp_path):
+    from earscan.segment import segment_background
+    img = np.full((400, 600, 3), (160, 90, 30), np.uint8)
+    cv2.ellipse(img, (400, 200), (30, 90), 0, 0, 360, (120, 150, 200), -1)     # petite oreille
+    cv2.rectangle(img, (60, 120), (220, 300), (255, 255, 255), -1)             # marqueur plus grand
+    m = segment_background(img)
+    assert m[200, 400] == 255 and m[200, 140] == 255
